@@ -1,0 +1,13 @@
+/out
+/cache
+/broadcast
+/.env
+/.DS_Store
+lib/**/.github
+lib/**/test
+lib/**/script
+lib/**/scripts
+lib/**/docs
+lib/**/audits
+lib/**/cache
+lib/**/out
