@@ -25,6 +25,7 @@ This makes the hub-token burn path explicit and testable instead of relying on a
 ## Build
 
 ```bash
+git submodule update --init --recursive
 forge build
 forge test -vv
 ```
@@ -47,6 +48,8 @@ The included tests validate accounting through a mock `PoolManager`; they do not
 ## Repository Layout
 
 ```text
+frontend/
+  Static tournament market board prototype
 src/
   BuybackVault.sol
   HubToken.sol
@@ -58,3 +61,5 @@ test/
 docs/
   design.md
 ```
+
+The frontend is static. Open `frontend/index.html` directly, or serve the folder with any static file server.

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tournament Hook Board</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Uniswap v4 hook experiment</p>
+        <h1>Tournament Hook Board</h1>
+      </div>
+      <div class="network">Local / Testnet</div>
+    </header>
+
+    <main>
+      <section class="hub" aria-labelledby="hub-title">
+        <div>
+          <p class="eyebrow">Hub token</p>
+          <h2 id="hub-title">HUB</h2>
+          <p class="summary">
+            Registered team pools pay a hook fee. Half is reserved for hub-token buybacks and half routes to treasury.
+          </p>
+        </div>
+        <dl class="hub-stats">
+          <div>
+            <dt>Total burned</dt>
+            <dd id="hubBurned">-</dd>
+          </div>
+          <div>
+            <dt>Pending buyback</dt>
+            <dd id="pendingBuyback">-</dd>
+          </div>
+          <div>
+            <dt>Treasury routed</dt>
+            <dd id="treasuryRouted">-</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="controls" aria-label="Board controls">
+        <label>
+          Sort
+          <select id="sortMode">
+            <option value="marketCap">Market cap</option>
+            <option value="volume">24h volume</option>
+            <option value="burn">Buyback contribution</option>
+          </select>
+        </label>
+        <label>
+          Search
+          <input id="searchBox" type="search" placeholder="Team or ticker" />
+        </label>
+      </section>
+
+      <section class="board" aria-labelledby="board-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Registered pools</p>
+            <h2 id="board-title">Team Market Board</h2>
+          </div>
+          <p id="updatedAt" class="updated"></p>
+        </div>
+        <div id="teamGrid" class="grid"></div>
+      </section>
+
+      <section class="matches" aria-labelledby="match-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Catalysts</p>
+            <h2 id="match-title">Upcoming Match Hooks</h2>
+          </div>
+        </div>
+        <div id="matchList" class="match-list"></div>
+      </section>
+    </main>
+
+    <script src="./config.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
