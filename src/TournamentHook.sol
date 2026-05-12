@@ -89,13 +89,12 @@ contract TournamentHook is IHooks {
         emit PoolRegistrationRemoved(poolId);
     }
 
-    function afterSwap(
-        address,
-        PoolKey calldata key,
-        SwapParams calldata params,
-        BalanceDelta delta,
-        bytes calldata
-    ) external override onlyManager returns (bytes4, int128) {
+    function afterSwap(address, PoolKey calldata key, SwapParams calldata params, BalanceDelta delta, bytes calldata)
+        external
+        override
+        onlyManager
+        returns (bytes4, int128)
+    {
         PoolId poolId = key.toId();
         if (!isRegisteredPool[poolId]) revert PoolNotRegistered(poolId);
 
@@ -127,7 +126,8 @@ contract TournamentHook is IHooks {
         returns (Currency feeCurrency, int128 swapAmount)
     {
         bool specifiedTokenIs0 = ((params.amountSpecified < 0) == params.zeroForOne);
-        (feeCurrency, swapAmount) = specifiedTokenIs0 ? (key.currency1, delta.amount1()) : (key.currency0, delta.amount0());
+        (feeCurrency, swapAmount) =
+            specifiedTokenIs0 ? (key.currency1, delta.amount1()) : (key.currency0, delta.amount0());
     }
 
     function beforeInitialize(address, PoolKey calldata, uint160) external pure override returns (bytes4) {

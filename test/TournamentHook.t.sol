@@ -24,12 +24,10 @@ contract MockPoolManager {
         IERC20(Currency.unwrap(currency)).safeTransfer(to, amount);
     }
 
-    function callAfterSwap(
-        TournamentHook hook,
-        PoolKey calldata key,
-        SwapParams calldata params,
-        BalanceDelta delta
-    ) external returns (bytes4 selector, int128 hookDelta) {
+    function callAfterSwap(TournamentHook hook, PoolKey calldata key, SwapParams calldata params, BalanceDelta delta)
+        external
+        returns (bytes4 selector, int128 hookDelta)
+    {
         return hook.afterSwap(address(this), key, params, delta, "");
     }
 }
@@ -95,7 +93,7 @@ contract TournamentHookTest is Test {
         (PoolKey memory key, SwapParams memory params, BalanceDelta delta, address feeToken) =
             _registeredExactInPoolWithFeeCurrency(address(quote), 1_000e18);
 
-        quote.transfer(address(manager), 20e18);
+        assertTrue(quote.transfer(address(manager), 20e18));
 
         (bytes4 selector, int128 hookDelta) = manager.callAfterSwap(hook, key, params, delta);
 
@@ -110,11 +108,11 @@ contract TournamentHookTest is Test {
         (PoolKey memory key, SwapParams memory params, BalanceDelta delta, address feeToken) =
             _registeredExactInPoolWithFeeCurrency(address(quote), 1_000e18);
 
-        quote.transfer(address(manager), 20e18);
+        assertTrue(quote.transfer(address(manager), 20e18));
         manager.callAfterSwap(hook, key, params, delta);
 
         MockBuybackExecutor executor = new MockBuybackExecutor(2e18);
-        hub.transfer(address(executor), 20e18);
+        assertTrue(hub.transfer(address(executor), 20e18));
 
         uint256 supplyBefore = hub.totalSupply();
 
@@ -133,20 +131,30 @@ contract TournamentHookTest is Test {
         returns (PoolKey memory key, SwapParams memory params, BalanceDelta delta, address feeToken)
     {
         (Currency currency0, Currency currency1) = _sort(address(team), address(quote));
-        key = PoolKey({currency0: currency0, currency1: currency1, fee: 3_000, tickSpacing: 60, hooks: IHooks(address(hook))});
+        key = PoolKey({
+            currency0: currency0, currency1: currency1, fee: 3_000, tickSpacing: 60, hooks: IHooks(address(hook))
+        });
 
         vm.prank(owner);
         hook.registerPool(key);
 
         if (Currency.unwrap(currency1) == desiredFeeToken) {
-            params = SwapParams({zeroForOne: true, amountSpecified: -int256(uint256(outputAmount)), sqrtPriceLimitX96: 0});
-            delta = toBalanceDelta(0, -int128(outputAmount));
+            params =
+                SwapParams({zeroForOne: true, amountSpecified: -int256(uint256(outputAmount)), sqrtPriceLimitX96: 0});
+            delta = toBalanceDelta(0, -_toInt128(outputAmount));
             feeToken = Currency.unwrap(currency1);
         } else {
-            params = SwapParams({zeroForOne: false, amountSpecified: -int256(uint256(outputAmount)), sqrtPriceLimitX96: 0});
-            delta = toBalanceDelta(-int128(outputAmount), 0);
+            params =
+                SwapParams({zeroForOne: false, amountSpecified: -int256(uint256(outputAmount)), sqrtPriceLimitX96: 0});
+            delta = toBalanceDelta(-_toInt128(outputAmount), 0);
             feeToken = Currency.unwrap(currency0);
         }
+    }
+
+    function _toInt128(uint128 value) internal pure returns (int128) {
+        require(value <= uint128(type(int128).max), "INT128_OVERFLOW");
+        // forge-lint: disable-next-line(unsafe-typecast)
+        return int128(value);
     }
 
     function _sort(address a, address b) internal pure returns (Currency currency0, Currency currency1) {

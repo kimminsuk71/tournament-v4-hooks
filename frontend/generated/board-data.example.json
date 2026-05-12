@@ -1,0 +1,57 @@
+{
+  "generatedAt": "2026-05-12T00:00:00.000Z",
+  "fromBlock": 0,
+  "toBlock": 0,
+  "hook": "0x0000000000000000000000000000000000000044",
+  "vault": "0x0000000000000000000000000000000000000001",
+  "hub": {
+    "symbol": "HUB",
+    "decimals": 18,
+    "totalBurnedRaw": "1284200000000000000000000",
+    "pendingBuybackRaw": "28400000000000000000000",
+    "treasuryRoutedRaw": "28150000000000000000000",
+    "totalBurnedDisplay": "1284200.0",
+    "pendingBuybackDisplay": "28400.0",
+    "treasuryRoutedDisplay": "28150.0"
+  },
+  "teams": [
+    {
+      "id": "alpha",
+      "name": "Alpha FC",
+      "symbol": "ALPHA",
+      "countryCode": "us",
+      "token": null,
+      "marketCap": 940000,
+      "volume": 184000,
+      "decimals": 18,
+      "poolId": "0xpool-alpha",
+      "buybackRaw": "7100000000000000000000",
+      "treasuryRaw": "7100000000000000000000",
+      "buybackDisplay": "7100.0",
+      "treasuryDisplay": "7100.0"
+    },
+    {
+      "id": "bravo",
+      "name": "Bravo United",
+      "symbol": "BRAVO",
+      "countryCode": "br",
+      "token": null,
+      "marketCap": 760000,
+      "volume": 211000,
+      "decimals": 18,
+      "poolId": "0xpool-bravo",
+      "buybackRaw": "5800000000000000000000",
+      "treasuryRaw": "5800000000000000000000",
+      "buybackDisplay": "5800.0",
+      "treasuryDisplay": "5800.0"
+    }
+  ],
+  "matches": [
+    {
+      "home": "Alpha FC",
+      "away": "Bravo United",
+      "date": "2026-06-11",
+      "venue": "Opening match"
+    }
+  ]
+}

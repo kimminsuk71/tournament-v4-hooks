@@ -1,4 +1,3 @@
-const cfg = window.TOURNAMENT_BOARD;
 const grid = document.getElementById("teamGrid");
 const matchList = document.getElementById("matchList");
 const sortMode = document.getElementById("sortMode");
@@ -16,20 +15,64 @@ function compact(value) {
   return new Intl.NumberFormat("en-US", {
     notation: "compact",
     maximumFractionDigits: 2
-  }).format(value);
+  }).format(Number(value ?? 0));
 }
 
 function flagUrl(code) {
   return `https://flagcdn.com/w80/${encodeURIComponent(code)}.png`;
 }
 
-function renderHub() {
-  document.getElementById("hubBurned").textContent = `${compact(cfg.hub.totalBurned)} ${cfg.hub.symbol}`;
-  document.getElementById("pendingBuyback").textContent = usd(cfg.hub.pendingBuybackUsd);
-  document.getElementById("treasuryRouted").textContent = usd(cfg.hub.treasuryRoutedUsd);
+function displayTokenAmount(value) {
+  const numeric = Number(value ?? 0);
+  return Number.isFinite(numeric) ? compact(numeric) : "0";
 }
 
-function renderTeams() {
+function normalizeBoard(raw) {
+  const hub = raw.hub ?? {};
+  const teams = (raw.teams ?? []).map((team) => {
+    const buyback = Number(team.buyback ?? team.buybackDisplay ?? 0);
+    const treasury = Number(team.treasury ?? team.treasuryDisplay ?? 0);
+    return {
+      ...team,
+      buyback,
+      treasury,
+      pool: team.pool ?? team.poolId ?? "unregistered",
+      burn: buyback,
+      volume: Number(team.volume ?? 0),
+      marketCap: Number(team.marketCap ?? 0)
+    };
+  });
+
+  return {
+    ...raw,
+    hub: {
+      ...hub,
+      symbol: hub.symbol ?? "HUB",
+      totalBurned: hub.totalBurned ?? hub.totalBurnedDisplay ?? 0,
+      pendingBuyback: hub.pendingBuyback ?? hub.pendingBuybackDisplay ?? hub.pendingBuybackUsd ?? 0,
+      treasuryRouted: hub.treasuryRouted ?? hub.treasuryRoutedDisplay ?? hub.treasuryRoutedUsd ?? 0
+    },
+    teams
+  };
+}
+
+async function loadBoard() {
+  try {
+    const response = await fetch("./generated/board-data.json", { cache: "no-store" });
+    if (response.ok) return normalizeBoard(await response.json());
+  } catch {
+    // Opening index.html directly cannot fetch local generated JSON; config.js is the fallback.
+  }
+  return normalizeBoard(window.TOURNAMENT_BOARD);
+}
+
+function renderHub(cfg) {
+  document.getElementById("hubBurned").textContent = `${displayTokenAmount(cfg.hub.totalBurned)} ${cfg.hub.symbol}`;
+  document.getElementById("pendingBuyback").textContent = displayTokenAmount(cfg.hub.pendingBuyback);
+  document.getElementById("treasuryRouted").textContent = displayTokenAmount(cfg.hub.treasuryRouted);
+}
+
+function renderTeams(cfg) {
   const mode = sortMode.value;
   const query = searchBox.value.trim().toLowerCase();
   const teams = cfg.teams
@@ -50,7 +93,7 @@ function renderTeams() {
             <dl class="stats">
               <div><dt>Market cap</dt><dd>${usd(team.marketCap)}</dd></div>
               <div><dt>24h volume</dt><dd>${usd(team.volume)}</dd></div>
-              <div><dt>Buyback</dt><dd>${usd(team.buyback)}</dd></div>
+              <div><dt>Buyback</dt><dd>${displayTokenAmount(team.buyback)}</dd></div>
             </dl>
             <div class="pool">Pool ${team.pool}</div>
           </div>
@@ -62,7 +105,7 @@ function renderTeams() {
   document.getElementById("updatedAt").textContent = `Updated ${new Date().toLocaleTimeString()}`;
 }
 
-function renderMatches() {
+function renderMatches(cfg) {
   matchList.innerHTML = cfg.matches
     .map(
       (match) => `
@@ -78,9 +121,14 @@ function renderMatches() {
     .join("");
 }
 
-sortMode.addEventListener("change", renderTeams);
-searchBox.addEventListener("input", renderTeams);
+async function boot() {
+  const cfg = await loadBoard();
+  sortMode.addEventListener("change", () => renderTeams(cfg));
+  searchBox.addEventListener("input", () => renderTeams(cfg));
 
-renderHub();
-renderTeams();
-renderMatches();
+  renderHub(cfg);
+  renderTeams(cfg);
+  renderMatches(cfg);
+}
+
+boot();

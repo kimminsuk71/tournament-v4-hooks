@@ -1,0 +1,62 @@
+{
+  "hub": {
+    "symbol": "HUB",
+    "decimals": 18
+  },
+  "teams": [
+    {
+      "id": "alpha",
+      "name": "Alpha FC",
+      "symbol": "ALPHA",
+      "countryCode": "us",
+      "token": null,
+      "marketCap": 940000,
+      "volume": 184000,
+      "decimals": 18
+    },
+    {
+      "id": "bravo",
+      "name": "Bravo United",
+      "symbol": "BRAVO",
+      "countryCode": "br",
+      "token": null,
+      "marketCap": 760000,
+      "volume": 211000,
+      "decimals": 18
+    },
+    {
+      "id": "delta",
+      "name": "Delta City",
+      "symbol": "DELTA",
+      "countryCode": "de",
+      "token": null,
+      "marketCap": 520000,
+      "volume": 96000,
+      "decimals": 18
+    },
+    {
+      "id": "nova",
+      "name": "Nova Athletic",
+      "symbol": "NOVA",
+      "countryCode": "jp",
+      "token": null,
+      "marketCap": 410000,
+      "volume": 72000,
+      "decimals": 18
+    }
+  ],
+  "matches": [
+    {
+      "home": "Alpha FC",
+      "away": "Bravo United",
+      "date": "2026-06-11",
+      "venue": "Opening match"
+    },
+    {
+      "home": "Delta City",
+      "away": "Nova Athletic",
+      "date": "2026-06-13",
+      "venue": "Group stage"
+    }
+  ]
+}

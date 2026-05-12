@@ -18,10 +18,7 @@ contract BuybackVault is Ownable {
     event TreasurySet(address indexed treasury);
     event FeeDeposited(address indexed feeToken, uint256 buybackAmount, uint256 treasuryAmount);
     event BuybackBurned(
-        address indexed feeToken,
-        address indexed executor,
-        uint256 feeAmountIn,
-        uint256 hubAmountBurned
+        address indexed feeToken, address indexed executor, uint256 feeAmountIn, uint256 hubAmountBurned
     );
 
     address public immutable hubToken;

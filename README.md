@@ -26,6 +26,7 @@ This makes the hub-token burn path explicit and testable instead of relying on a
 
 ```bash
 git submodule update --init --recursive
+npm install
 forge build
 forge test -vv
 ```
@@ -35,6 +36,7 @@ Current test coverage:
 - team token factory creation and duplicate guard
 - hook swap fee routing
 - buyback executor path and hub token burn
+- CREATE2 hook salt mining and deployed address prediction
 
 ## Important v4 Note
 
@@ -43,7 +45,58 @@ Real Uniswap v4 deployment must use a hook address with the correct permission b
 - `afterSwap`
 - `afterSwapReturnDelta`
 
-The included tests validate accounting through a mock `PoolManager`; they do not mine a CREATE2 hook address yet.
+`DeployWithMinedHook` deploys `HookDeployer`, mines a CREATE2 salt, and deploys `TournamentHook` to an address whose low 14 permission bits equal `0x44`.
+
+## Testnet Flow
+
+Set the usual broadcast variables first:
+
+```bash
+export PRIVATE_KEY=0x...
+export RPC_URL=https://...
+export POOL_MANAGER=0x...
+export TREASURY=0x...
+```
+
+Deploy the hub token, vault, team factory, hook deployer, and mined hook:
+
+```bash
+forge script script/DeployWithMinedHook.s.sol:DeployWithMinedHook \
+  --rpc-url "$RPC_URL" \
+  --broadcast
+```
+
+Create default team tokens, or override `TEAM_IDS`, `TEAM_NAMES`, `TEAM_SYMBOLS`, and `TEAM_INITIAL_SUPPLY`:
+
+```bash
+export TEAM_FACTORY=0x...
+forge script script/CreateTeams.s.sol:CreateTeams \
+  --rpc-url "$RPC_URL" \
+  --broadcast
+```
+
+Register an existing Uniswap v4 pool for hook fee routing:
+
+```bash
+export HOOK=0x...
+export TOKEN_A=0x...
+export TOKEN_B=0x...
+forge script script/RegisterPool.s.sol:RegisterPool \
+  --rpc-url "$RPC_URL" \
+  --broadcast
+```
+
+After team token addresses exist, copy them into `config/teams.json`, then generate the frontend data file:
+
+```bash
+npm run index -- \
+  --rpc-url="$RPC_URL" \
+  --hook="$HOOK" \
+  --vault=0x... \
+  --from-block=0
+```
+
+The generated board is written to `frontend/generated/board-data.json`. If it is missing, the frontend falls back to `frontend/config.js`.
 
 ## Repository Layout
 
@@ -51,15 +104,24 @@ The included tests validate accounting through a mock `PoolManager`; they do not
 frontend/
   Static tournament market board prototype
 src/
+  HookDeployer.sol
   BuybackVault.sol
   HubToken.sol
   TeamToken.sol
   TeamTokenFactory.sol
   TournamentHook.sol
+script/
+  DeployWithMinedHook.s.sol
+  CreateTeams.s.sol
+  RegisterPool.s.sol
+tools/
+  mine-hook-salt.mjs
+  index-events.mjs
 test/
+  HookDeployer.t.sol
   TournamentHook.t.sol
 docs/
   design.md
 ```
 
-The frontend is static. Open `frontend/index.html` directly, or serve the folder with any static file server.
+The frontend is static. Open `frontend/index.html` directly for the fallback sample, or serve the folder with any static file server so it can fetch `frontend/generated/board-data.json`.

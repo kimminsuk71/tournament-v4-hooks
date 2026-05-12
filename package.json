@@ -1,0 +1,14 @@
+{
+  "name": "tournament-v4-hooks",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test -vv",
+    "mine:hook": "node tools/mine-hook-salt.mjs",
+    "index": "node tools/index-events.mjs"
+  },
+  "dependencies": {
+    "ethers": "^6.15.0"
+  }
+}
