@@ -4,10 +4,11 @@ pragma solidity ^0.8.26;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IBuybackExecutor} from "./interfaces/IBuybackExecutor.sol";
 import {HubToken} from "./HubToken.sol";
 
-contract BuybackVault is Ownable {
+contract BuybackVault is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     error InvalidAddress();
@@ -16,6 +17,9 @@ contract BuybackVault is Ownable {
     error FeeTokenNotSpent();
     error HubTokenNotReceived();
     error DirectHubBurnRequired();
+    error HookAlreadySet();
+    error FeeTokenNotReceived();
+    error TreasuryTokenNotReceived();
 
     event HookSet(address indexed hook);
     event TreasurySet(address indexed treasury);
@@ -38,19 +42,22 @@ contract BuybackVault is Ownable {
     }
 
     constructor(address hubToken_, address owner_, address treasury_) Ownable(owner_) {
-        if (hubToken_ == address(0) || owner_ == address(0) || treasury_ == address(0)) revert InvalidAddress();
+        if (hubToken_ == address(0) || owner_ == address(0) || treasury_ == address(0) || treasury_ == address(this)) {
+            revert InvalidAddress();
+        }
         hubToken = hubToken_;
         treasury = treasury_;
     }
 
     function setHook(address hook_) external onlyOwner {
+        if (hook != address(0)) revert HookAlreadySet();
         if (hook_ == address(0)) revert InvalidAddress();
         hook = hook_;
         emit HookSet(hook_);
     }
 
     function setTreasury(address treasury_) external onlyOwner {
-        if (treasury_ == address(0)) revert InvalidAddress();
+        if (treasury_ == address(0) || treasury_ == address(this)) revert InvalidAddress();
         treasury = treasury_;
         emit TreasurySet(treasury_);
     }
@@ -59,12 +66,20 @@ contract BuybackVault is Ownable {
         if (feeToken == address(0)) revert InvalidAddress();
 
         if (buybackAmount != 0) {
+            uint256 vaultBalanceBefore = IERC20(feeToken).balanceOf(address(this));
             IERC20(feeToken).safeTransferFrom(msg.sender, address(this), buybackAmount);
+            if (IERC20(feeToken).balanceOf(address(this)) - vaultBalanceBefore != buybackAmount) {
+                revert FeeTokenNotReceived();
+            }
             pendingBuyback[feeToken] += buybackAmount;
         }
 
         if (treasuryAmount != 0) {
+            uint256 treasuryBalanceBefore = IERC20(feeToken).balanceOf(treasury);
             IERC20(feeToken).safeTransferFrom(msg.sender, treasury, treasuryAmount);
+            if (IERC20(feeToken).balanceOf(treasury) - treasuryBalanceBefore != treasuryAmount) {
+                revert TreasuryTokenNotReceived();
+            }
             totalTreasuryRouted[feeToken] += treasuryAmount;
         }
 
@@ -74,6 +89,7 @@ contract BuybackVault is Ownable {
     function executeBuybackAndBurn(address feeToken, address executor, uint256 amountIn, uint256 minHubAmountOut)
         external
         onlyOwner
+        nonReentrant
         returns (uint256 hubAmountOut)
     {
         if (feeToken == address(0) || executor == address(0)) revert InvalidAddress();
@@ -98,7 +114,7 @@ contract BuybackVault is Ownable {
         emit BuybackBurned(feeToken, executor, amountIn, hubAmountOut);
     }
 
-    function burnPendingHub(uint256 amount) external onlyOwner {
+    function burnPendingHub(uint256 amount) external onlyOwner nonReentrant {
         if (amount == 0 || amount > pendingBuyback[hubToken]) revert InvalidAmount();
 
         pendingBuyback[hubToken] -= amount;

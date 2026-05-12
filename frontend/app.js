@@ -19,7 +19,8 @@ function compact(value) {
 }
 
 function flagUrl(code) {
-  return `https://flagcdn.com/w80/${encodeURIComponent(code)}.png`;
+  const normalized = String(code ?? "").toLowerCase();
+  return `https://flagcdn.com/w80/${encodeURIComponent(normalized)}.png`;
 }
 
 function displayTokenAmount(value) {
@@ -79,46 +80,84 @@ function renderTeams(cfg) {
     .filter((team) => `${team.name} ${team.symbol}`.toLowerCase().includes(query))
     .sort((a, b) => b[mode] - a[mode]);
 
-  grid.innerHTML = teams
-    .map(
-      (team, index) => `
-        <article class="team-card">
-          <div class="rank">${index + 1}</div>
-          <img class="flag" src="${flagUrl(team.countryCode)}" alt="" loading="lazy" />
-          <div class="team-main">
-            <div class="team-title">
-              <h3>${team.name}</h3>
-              <span>${team.symbol}</span>
-            </div>
-            <dl class="stats">
-              <div><dt>Market cap</dt><dd>${usd(team.marketCap)}</dd></div>
-              <div><dt>24h volume</dt><dd>${usd(team.volume)}</dd></div>
-              <div><dt>Buyback</dt><dd>${displayTokenAmount(team.buyback)}</dd></div>
-            </dl>
-            <div class="pool">Pool ${team.pool}</div>
-          </div>
-        </article>
-      `
-    )
-    .join("");
+  grid.replaceChildren(...teams.map((team, index) => createTeamCard(team, index)));
 
   document.getElementById("updatedAt").textContent = `Updated ${new Date().toLocaleTimeString()}`;
 }
 
 function renderMatches(cfg) {
-  matchList.innerHTML = cfg.matches
-    .map(
-      (match) => `
-        <article class="match-card">
-          <div>
-            <p>${match.venue}</p>
-            <h3>${match.home} vs ${match.away}</h3>
-          </div>
-          <time datetime="${match.date}">${new Date(`${match.date}T12:00:00`).toLocaleDateString()}</time>
-        </article>
-      `
-    )
-    .join("");
+  matchList.replaceChildren(...cfg.matches.map(createMatchCard));
+}
+
+function createTeamCard(team, index) {
+  const card = document.createElement("article");
+  card.className = "team-card";
+
+  const rank = document.createElement("div");
+  rank.className = "rank";
+  rank.textContent = String(index + 1);
+
+  const flag = document.createElement("img");
+  flag.className = "flag";
+  flag.src = flagUrl(team.countryCode);
+  flag.alt = "";
+  flag.loading = "lazy";
+
+  const main = document.createElement("div");
+  main.className = "team-main";
+
+  const title = document.createElement("div");
+  title.className = "team-title";
+  const name = document.createElement("h3");
+  name.textContent = team.name;
+  const symbol = document.createElement("span");
+  symbol.textContent = team.symbol;
+  title.append(name, symbol);
+
+  const stats = document.createElement("dl");
+  stats.className = "stats";
+  stats.append(
+    statItem("Market cap", usd(team.marketCap)),
+    statItem("24h volume", usd(team.volume)),
+    statItem("Buyback", displayTokenAmount(team.buyback))
+  );
+
+  const pool = document.createElement("div");
+  pool.className = "pool";
+  pool.textContent = `Pool ${team.pool}`;
+
+  main.append(title, stats, pool);
+  card.append(rank, flag, main);
+  return card;
+}
+
+function statItem(label, value) {
+  const wrapper = document.createElement("div");
+  const term = document.createElement("dt");
+  term.textContent = label;
+  const description = document.createElement("dd");
+  description.textContent = value;
+  wrapper.append(term, description);
+  return wrapper;
+}
+
+function createMatchCard(match) {
+  const card = document.createElement("article");
+  card.className = "match-card";
+
+  const content = document.createElement("div");
+  const venue = document.createElement("p");
+  venue.textContent = match.venue;
+  const title = document.createElement("h3");
+  title.textContent = `${match.home} vs ${match.away}`;
+  content.append(venue, title);
+
+  const time = document.createElement("time");
+  time.dateTime = match.date;
+  time.textContent = new Date(`${match.date}T12:00:00`).toLocaleDateString();
+
+  card.append(content, time);
+  return card;
 }
 
 async function boot() {

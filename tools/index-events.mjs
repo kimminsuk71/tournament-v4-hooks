@@ -29,6 +29,9 @@ if (!rpcUrl || !hook || !vault) {
 }
 
 const teams = JSON.parse(readFileSync(teamsPath, "utf8"));
+const teamTokens = new Set(
+  teams.teams.map((team) => (team.token ?? "").toLowerCase()).filter((token) => /^0x[0-9a-f]{40}$/.test(token))
+);
 const provider = new JsonRpcProvider(rpcUrl);
 const latest = await provider.getBlockNumber();
 const iface = new Interface([
@@ -48,14 +51,18 @@ const byPool = new Map();
 let totalBuyback = 0n;
 let totalTreasury = 0n;
 let totalBurned = 0n;
+const burnedByFeeToken = new Map();
 
 for (const log of logs) {
   const parsed = iface.parseLog(log);
   if (parsed.name === "PoolRegistered") {
     const poolId = parsed.args.poolId;
-    const teamToken = parsed.args.teamToken.toLowerCase();
+    const currency0 = parsed.args.teamToken.toLowerCase();
+    const currency1 = parsed.args.quoteToken.toLowerCase();
+    const teamToken = teamTokens.has(currency0) ? currency0 : teamTokens.has(currency1) ? currency1 : null;
+    const quoteToken = teamToken === currency0 ? currency1 : currency0;
     const existing = byPool.get(poolId) ?? {};
-    byPool.set(poolId, { ...existing, poolId, teamToken, quoteToken: parsed.args.quoteToken.toLowerCase() });
+    byPool.set(poolId, { ...existing, poolId, teamToken, quoteToken });
   }
   if (parsed.name === "SwapFeeRouted") {
     const poolId = parsed.args.poolId;
@@ -69,22 +76,35 @@ for (const log of logs) {
     byPool.set(poolId, existing);
   }
   if (parsed.name === "BuybackBurned") {
-    totalBurned += parsed.args.hubAmountBurned;
+    const feeToken = parsed.args.feeToken.toLowerCase();
+    const feeAmountIn = parsed.args.feeAmountIn;
+    const hubAmountBurned = parsed.args.hubAmountBurned;
+    burnedByFeeToken.set(feeToken, (burnedByFeeToken.get(feeToken) ?? 0n) + feeAmountIn);
+    totalBurned += hubAmountBurned;
   }
 }
 
 const enriched = teams.teams.map((team) => {
   const token = (team.token ?? "").toLowerCase();
-  const pool = [...byPool.values()].find((item) => item.teamToken === token || item.quoteToken === token);
+  const pool = token ? [...byPool.values()].find((item) => item.teamToken === token) : null;
+  const grossBuyback = pool?.buyback ?? 0n;
+  const burnedFeeAmount = pool?.feeToken ? (burnedByFeeToken.get(pool.feeToken) ?? 0n) : 0n;
+  const pendingBuyback = grossBuyback > burnedFeeAmount ? grossBuyback - burnedFeeAmount : 0n;
   return {
     ...team,
     poolId: pool?.poolId ?? team.poolId ?? null,
-    buybackRaw: pool?.buyback?.toString() ?? "0",
+    buybackRaw: pendingBuyback.toString(),
     treasuryRaw: pool?.treasury?.toString() ?? "0",
-    buybackDisplay: formatUnits(pool?.buyback ?? 0n, team.decimals ?? 18),
+    buybackDisplay: formatUnits(pendingBuyback, team.decimals ?? 18),
     treasuryDisplay: formatUnits(pool?.treasury ?? 0n, team.decimals ?? 18)
   };
 });
+
+const pendingBuybackTotal = [...byPool.values()].reduce((sum, pool) => {
+  const grossBuyback = pool.buyback ?? 0n;
+  const burnedFeeAmount = pool.feeToken ? (burnedByFeeToken.get(pool.feeToken) ?? 0n) : 0n;
+  return sum + (grossBuyback > burnedFeeAmount ? grossBuyback - burnedFeeAmount : 0n);
+}, 0n);
 
 const payload = {
   generatedAt: new Date().toISOString(),
@@ -95,10 +115,10 @@ const payload = {
   hub: {
     ...teams.hub,
     totalBurnedRaw: totalBurned.toString(),
-    pendingBuybackRaw: totalBuyback.toString(),
+    pendingBuybackRaw: pendingBuybackTotal.toString(),
     treasuryRoutedRaw: totalTreasury.toString(),
     totalBurnedDisplay: formatUnits(totalBurned, teams.hub.decimals ?? 18),
-    pendingBuybackDisplay: formatUnits(totalBuyback, teams.hub.decimals ?? 18),
+    pendingBuybackDisplay: formatUnits(pendingBuybackTotal, teams.hub.decimals ?? 18),
     treasuryRoutedDisplay: formatUnits(totalTreasury, teams.hub.decimals ?? 18)
   },
   teams: enriched,

@@ -16,7 +16,7 @@ contract HookDeployerTest is Test {
         address owner = address(this);
         HubToken hub = new HubToken("Tournament Hub", "HUB", owner, 1_000_000e18);
         BuybackVault vault = new BuybackVault(address(hub), owner, owner);
-        HookDeployer deployer = new HookDeployer();
+        HookDeployer deployer = new HookDeployer(owner);
 
         bytes memory creationCode = abi.encodePacked(
             type(TournamentHook).creationCode, abi.encode(IPoolManager(address(0xBEEF)), vault, owner, uint16(100))
@@ -29,6 +29,14 @@ contract HookDeployerTest is Test {
 
         address deployed = deployer.deploy(salt, creationCode);
         assertEq(deployed, predicted);
+    }
+
+    function testOnlyOwnerCanDeploy() public {
+        HookDeployer deployer = new HookDeployer(address(this));
+
+        vm.prank(address(0xB0B));
+        vm.expectRevert(HookDeployer.OnlyOwner.selector);
+        deployer.deploy(bytes32(0), hex"00");
     }
 
     function _mineSalt(address deployer, bytes32 initCodeHash, uint256 maxIterations)

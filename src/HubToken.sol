@@ -6,6 +6,8 @@ import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC2
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract HubToken is ERC20, ERC20Burnable, Ownable {
+    error MintingDisabled();
+
     constructor(string memory name_, string memory symbol_, address owner_, uint256 initialSupply)
         ERC20(name_, symbol_)
         Ownable(owner_)
@@ -13,7 +15,7 @@ contract HubToken is ERC20, ERC20Burnable, Ownable {
         _mint(owner_, initialSupply);
     }
 
-    function mint(address to, uint256 amount) external onlyOwner {
-        _mint(to, amount);
+    function mint(address, uint256) external pure {
+        revert MintingDisabled();
     }
 }

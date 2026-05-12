@@ -61,10 +61,18 @@ This is still an experiment, but the current implementation enforces the main in
 
 - only the configured v4 `PoolManager` can call `afterSwap`
 - only pools whose `PoolKey.hooks` equals the deployed hook can be registered
+- registered pool currencies must be non-native ERC20 addresses and sorted as v4 expects
 - fee bips are capped at 20%
-- native-currency pools are rejected
+- hook fee accounting rejects non-output swap deltas
+- `HubToken` has no post-deploy mint path
+- `HookDeployer` is owner-gated to prevent third parties from occupying salts
+- team token creation rejects zero owner and zero initial supply
+- vault hook address can only be set once
+- vault rejects fee-on-transfer or rebasing behavior that causes short receipt
 - buyback executors must spend the exact fee-token amount and deliver the exact reported `HUB` amount
 - pending `HUB` can be burned directly without routing through an external executor
+- the frontend renders generated data through DOM text nodes rather than `innerHTML`
+- the event indexer treats `pendingBuyback` as deposits minus burned fee-token inventory
 
 ## Testnet Flow
 

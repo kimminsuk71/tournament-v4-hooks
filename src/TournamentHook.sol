@@ -18,6 +18,7 @@ import {BuybackVault} from "./BuybackVault.sol";
 contract TournamentHook is IHooks {
     using PoolIdLibrary for PoolKey;
     using SafeCast for uint256;
+    using SafeCast for int128;
     using SafeERC20 for IERC20;
 
     error OnlyPoolManager();
@@ -28,6 +29,8 @@ contract TournamentHook is IHooks {
     error NativeCurrencyUnsupported();
     error HookMismatch();
     error ExactOutputUnsupported();
+    error CurrenciesOutOfOrder();
+    error InvalidSwapDelta();
 
     event PoolRegistered(PoolId indexed poolId, address indexed teamToken, address indexed quoteToken);
     event PoolRegistrationRemoved(PoolId indexed poolId);
@@ -101,14 +104,14 @@ contract TournamentHook is IHooks {
     }
 
     function registerPool(PoolKey calldata key) external onlyOwner returns (PoolId poolId) {
-        if (address(key.hooks) != address(this)) revert HookMismatch();
+        _validatePoolKey(key);
         poolId = key.toId();
         isRegisteredPool[poolId] = true;
         emit PoolRegistered(poolId, Currency.unwrap(key.currency0), Currency.unwrap(key.currency1));
     }
 
     function removePool(PoolKey calldata key) external onlyOwner returns (PoolId poolId) {
-        if (address(key.hooks) != address(this)) revert HookMismatch();
+        _validatePoolKey(key);
         poolId = key.toId();
         isRegisteredPool[poolId] = false;
         emit PoolRegistrationRemoved(poolId);
@@ -127,8 +130,9 @@ contract TournamentHook is IHooks {
 
         (Currency feeCurrency, int128 swapAmount) = _feeCurrencyAndAmount(key, params, delta);
         if (feeCurrency.isAddressZero()) revert NativeCurrencyUnsupported();
+        if (swapAmount >= 0) revert InvalidSwapDelta();
 
-        uint256 absAmount = uint256(uint128(swapAmount < 0 ? -swapAmount : swapAmount));
+        uint256 absAmount = uint256((-swapAmount).toUint128());
         uint256 feeAmount = absAmount * feeBips / 10_000;
         if (feeAmount == 0) return (IHooks.afterSwap.selector, 0);
 
@@ -154,6 +158,14 @@ contract TournamentHook is IHooks {
     {
         (feeCurrency, swapAmount) =
             params.zeroForOne ? (key.currency1, delta.amount1()) : (key.currency0, delta.amount0());
+    }
+
+    function _validatePoolKey(PoolKey calldata key) internal view {
+        if (address(key.hooks) != address(this)) revert HookMismatch();
+        address currency0 = Currency.unwrap(key.currency0);
+        address currency1 = Currency.unwrap(key.currency1);
+        if (currency0 == address(0) || currency1 == address(0)) revert NativeCurrencyUnsupported();
+        if (currency0 >= currency1) revert CurrenciesOutOfOrder();
     }
 
     function beforeInitialize(address, PoolKey calldata, uint160) external pure override returns (bytes4) {

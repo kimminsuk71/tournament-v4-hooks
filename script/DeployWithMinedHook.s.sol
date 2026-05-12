@@ -29,7 +29,7 @@ contract DeployWithMinedHook is Script {
         hub = new HubToken("Tournament Hub", "HUB", owner, 1_000_000_000e18);
         vault = new BuybackVault(address(hub), broadcaster, treasury);
         factory = new TeamTokenFactory(owner);
-        deployer = new HookDeployer();
+        deployer = new HookDeployer(broadcaster);
 
         bytes memory creationCode = abi.encodePacked(
             type(TournamentHook).creationCode, abi.encode(IPoolManager(poolManager), vault, owner, feeBips)

@@ -7,6 +7,8 @@ import {TeamToken} from "./TeamToken.sol";
 contract TeamTokenFactory is Ownable {
     error TeamAlreadyCreated(bytes32 teamKey);
     error EmptyTeamId();
+    error InvalidAddress();
+    error InvalidAmount();
 
     event TeamTokenCreated(bytes32 indexed teamKey, string teamId, address indexed token, address indexed owner);
 
@@ -23,6 +25,8 @@ contract TeamTokenFactory is Ownable {
         uint256 initialSupply
     ) external onlyOwner returns (address token) {
         if (bytes(teamId).length == 0) revert EmptyTeamId();
+        if (tokenOwner == address(0)) revert InvalidAddress();
+        if (initialSupply == 0) revert InvalidAmount();
         bytes32 key = keccak256(bytes(teamId));
         if (teamTokenOf[key] != address(0)) revert TeamAlreadyCreated(key);
 
