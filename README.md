@@ -12,13 +12,15 @@ It implements the useful part of the World Cup Coins style design as contracts:
 
 ## Mechanism
 
-For every swap on a registered pool:
+For every exact-input swap on a registered pool:
 
 1. `TournamentHook.afterSwap` computes a hook fee from the output token.
 2. The hook pulls that fee from the v4 `PoolManager`.
 3. 50% is deposited into `BuybackVault.pendingBuyback`.
 4. 50% is sent to `treasury`.
 5. The owner or keeper later calls `executeBuybackAndBurn` with a buyback executor.
+
+Exact-output swaps currently revert in the hook. Uniswap v4 `afterSwapReturnDelta` charges the unspecified currency; for exact-output swaps that would be the input token, which does not match this prototype's "fee from output token" rule.
 
 This makes the hub-token burn path explicit and testable instead of relying on a website promise.
 
@@ -36,6 +38,10 @@ Current test coverage:
 - team token factory creation and duplicate guard
 - hook swap fee routing
 - buyback executor path and hub token burn
+- exact-output rejection
+- pool registration hook-address mismatch rejection
+- buyback executor underpayment rejection
+- direct burn path when pending buyback inventory is already `HUB`
 - CREATE2 hook salt mining and deployed address prediction
 
 ## Important v4 Note
@@ -46,6 +52,19 @@ Real Uniswap v4 deployment must use a hook address with the correct permission b
 - `afterSwapReturnDelta`
 
 `DeployWithMinedHook` deploys `HookDeployer`, mines a CREATE2 salt, and deploys `TournamentHook` to an address whose low 14 permission bits equal `0x44`.
+
+The `TournamentHook` constructor validates these permission bits, so direct `new TournamentHook(...)` deployment is expected to revert unless the resulting address already has the required low bits. Use `DeployWithMinedHook` for any real v4-compatible deployment.
+
+## Audit Notes
+
+This is still an experiment, but the current implementation enforces the main invariants in code:
+
+- only the configured v4 `PoolManager` can call `afterSwap`
+- only pools whose `PoolKey.hooks` equals the deployed hook can be registered
+- fee bips are capped at 20%
+- native-currency pools are rejected
+- buyback executors must spend the exact fee-token amount and deliver the exact reported `HUB` amount
+- pending `HUB` can be burned directly without routing through an external executor
 
 ## Testnet Flow
 

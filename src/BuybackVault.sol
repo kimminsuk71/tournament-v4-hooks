@@ -13,6 +13,9 @@ contract BuybackVault is Ownable {
     error InvalidAddress();
     error InvalidAmount();
     error NothingReceived();
+    error FeeTokenNotSpent();
+    error HubTokenNotReceived();
+    error DirectHubBurnRequired();
 
     event HookSet(address indexed hook);
     event TreasurySet(address indexed treasury);
@@ -74,17 +77,34 @@ contract BuybackVault is Ownable {
         returns (uint256 hubAmountOut)
     {
         if (feeToken == address(0) || executor == address(0)) revert InvalidAddress();
+        if (feeToken == hubToken) revert DirectHubBurnRequired();
         if (amountIn == 0 || amountIn > pendingBuyback[feeToken]) revert InvalidAmount();
 
         pendingBuyback[feeToken] -= amountIn;
+        uint256 feeBalanceBefore = IERC20(feeToken).balanceOf(address(this));
+        uint256 hubBalanceBefore = IERC20(hubToken).balanceOf(address(this));
+
         IERC20(feeToken).forceApprove(executor, amountIn);
         hubAmountOut = IBuybackExecutor(executor).executeBuyback(feeToken, amountIn, hubToken, address(this));
         IERC20(feeToken).forceApprove(executor, 0);
 
         if (hubAmountOut < minHubAmountOut || hubAmountOut == 0) revert NothingReceived();
+        if (feeBalanceBefore - IERC20(feeToken).balanceOf(address(this)) != amountIn) revert FeeTokenNotSpent();
+        if (IERC20(hubToken).balanceOf(address(this)) - hubBalanceBefore != hubAmountOut) revert HubTokenNotReceived();
+
         HubToken(hubToken).burn(hubAmountOut);
         totalHubBurned += hubAmountOut;
 
         emit BuybackBurned(feeToken, executor, amountIn, hubAmountOut);
+    }
+
+    function burnPendingHub(uint256 amount) external onlyOwner {
+        if (amount == 0 || amount > pendingBuyback[hubToken]) revert InvalidAmount();
+
+        pendingBuyback[hubToken] -= amount;
+        HubToken(hubToken).burn(amount);
+        totalHubBurned += amount;
+
+        emit BuybackBurned(hubToken, address(0), amount, amount);
     }
 }

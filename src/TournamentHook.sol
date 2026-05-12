@@ -11,6 +11,7 @@ import {ModifyLiquidityParams, SwapParams} from "v4-core/types/PoolOperation.sol
 import {BalanceDelta} from "v4-core/types/BalanceDelta.sol";
 import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "v4-core/types/BeforeSwapDelta.sol";
 import {Currency} from "v4-core/types/Currency.sol";
+import {Hooks} from "v4-core/libraries/Hooks.sol";
 import {SafeCast} from "v4-core/libraries/SafeCast.sol";
 import {BuybackVault} from "./BuybackVault.sol";
 
@@ -25,6 +26,8 @@ contract TournamentHook is IHooks {
     error InvalidAddress();
     error PoolNotRegistered(PoolId poolId);
     error NativeCurrencyUnsupported();
+    error HookMismatch();
+    error ExactOutputUnsupported();
 
     event PoolRegistered(PoolId indexed poolId, address indexed teamToken, address indexed quoteToken);
     event PoolRegistrationRemoved(PoolId indexed poolId);
@@ -60,6 +63,26 @@ contract TournamentHook is IHooks {
         }
         if (feeBips_ > 2_000) revert InvalidBips();
 
+        Hooks.validateHookPermissions(
+            IHooks(address(this)),
+            Hooks.Permissions({
+                beforeInitialize: false,
+                afterInitialize: false,
+                beforeAddLiquidity: false,
+                afterAddLiquidity: false,
+                beforeRemoveLiquidity: false,
+                afterRemoveLiquidity: false,
+                beforeSwap: false,
+                afterSwap: true,
+                beforeDonate: false,
+                afterDonate: false,
+                beforeSwapReturnDelta: false,
+                afterSwapReturnDelta: true,
+                afterAddLiquidityReturnDelta: false,
+                afterRemoveLiquidityReturnDelta: false
+            })
+        );
+
         manager = manager_;
         vault = vault_;
         owner = owner_;
@@ -78,12 +101,14 @@ contract TournamentHook is IHooks {
     }
 
     function registerPool(PoolKey calldata key) external onlyOwner returns (PoolId poolId) {
+        if (address(key.hooks) != address(this)) revert HookMismatch();
         poolId = key.toId();
         isRegisteredPool[poolId] = true;
         emit PoolRegistered(poolId, Currency.unwrap(key.currency0), Currency.unwrap(key.currency1));
     }
 
     function removePool(PoolKey calldata key) external onlyOwner returns (PoolId poolId) {
+        if (address(key.hooks) != address(this)) revert HookMismatch();
         poolId = key.toId();
         isRegisteredPool[poolId] = false;
         emit PoolRegistrationRemoved(poolId);
@@ -95,6 +120,8 @@ contract TournamentHook is IHooks {
         onlyManager
         returns (bytes4, int128)
     {
+        if (params.amountSpecified > 0) revert ExactOutputUnsupported();
+
         PoolId poolId = key.toId();
         if (!isRegisteredPool[poolId]) revert PoolNotRegistered(poolId);
 
@@ -125,9 +152,8 @@ contract TournamentHook is IHooks {
         pure
         returns (Currency feeCurrency, int128 swapAmount)
     {
-        bool specifiedTokenIs0 = ((params.amountSpecified < 0) == params.zeroForOne);
         (feeCurrency, swapAmount) =
-            specifiedTokenIs0 ? (key.currency1, delta.amount1()) : (key.currency0, delta.amount0());
+            params.zeroForOne ? (key.currency1, delta.amount1()) : (key.currency0, delta.amount0());
     }
 
     function beforeInitialize(address, PoolKey calldata, uint160) external pure override returns (bytes4) {
