@@ -26,7 +26,7 @@ contract CreateTeams is Script {
 
         vm.startBroadcast(privateKey);
         for (uint256 i = 0; i < ids.length; i++) {
-            require(bytes(ids[i]).length != 0, "EMPTY_TEAM_ID");
+            require(_isValidTeamId(ids[i]), "INVALID_TEAM_ID");
             require(bytes(names[i]).length != 0, "EMPTY_TEAM_NAME");
             require(bytes(symbols[i]).length != 0, "EMPTY_TEAM_SYMBOL");
             address token =
@@ -34,5 +34,18 @@ contract CreateTeams is Script {
             console2.log(ids[i], token);
         }
         vm.stopBroadcast();
+    }
+
+    function _isValidTeamId(string memory teamId) internal pure returns (bool) {
+        bytes memory raw = bytes(teamId);
+        if (raw.length == 0) return false;
+        for (uint256 i = 0; i < raw.length; i++) {
+            bytes1 char = raw[i];
+            bool isLowerAlpha = char >= 0x61 && char <= 0x7a;
+            bool isDigit = char >= 0x30 && char <= 0x39;
+            bool isHyphen = char == 0x2d;
+            if (!isLowerAlpha && !isDigit && !isHyphen) return false;
+        }
+        return true;
     }
 }

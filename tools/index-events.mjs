@@ -135,13 +135,15 @@ for (const log of logs) {
 
 const enriched = normalizedTeams.map((team) => {
   const token = team.token ?? "";
-  const pool = token ? [...byPool.values()].find((item) => item.registered !== false && item.teamToken === token) : null;
+  const pool = token ? [...byPool.values()].find((item) => item.teamToken === token) : null;
+  const poolStatus = pool ? (pool.registered === false ? "removed" : "active") : "unregistered";
   const grossBuyback = pool?.buyback ?? 0n;
   const burnedFeeAmount = pool?.feeToken ? burnedByFeeToken.get(pool.feeToken) ?? 0n : 0n;
   const pendingBuyback = grossBuyback > burnedFeeAmount ? grossBuyback - burnedFeeAmount : 0n;
   return {
     ...team,
     poolId: pool?.poolId ?? team.poolId ?? null,
+    poolStatus,
     buybackRaw: pendingBuyback.toString(),
     treasuryRaw: pool?.treasury?.toString() ?? "0",
     buybackDisplay: formatUnits(pendingBuyback, team.decimals),

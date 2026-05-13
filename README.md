@@ -57,6 +57,7 @@ Current test coverage:
 - EOA manager, vault, and hub-token dependency rejection
 - canonical lowercase team id validation
 - treasury self, hook, and hub-token rejection
+- removed pool indexing status
 - CREATE2 hook salt mining and deployed address prediction
 - CREATE2 init code that deploys no runtime code rejection
 
@@ -99,6 +100,7 @@ This is still an experiment, but the current implementation enforces the main in
 - pending `HUB` can be burned directly without routing through an external executor
 - the frontend renders generated data through DOM text nodes rather than `innerHTML`
 - the event indexer treats `pendingBuyback` as deposits minus burned fee-token inventory
+- the event indexer preserves removed pool history and marks it with `poolStatus`
 - deployment and indexing scripts validate common malformed inputs before broadcasting or querying
 - helper scripts reject out-of-range hook fee settings, invalid addresses, invalid block numbers, zero salt-search windows, and integer casts that would truncate before encoding or broadcasting
 

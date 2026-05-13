@@ -40,6 +40,7 @@ function normalizeBoard(raw) {
       buyback,
       treasury,
       pool: team.pool ?? team.poolId ?? "unregistered",
+      poolStatus: team.poolStatus ?? (team.pool ?? team.poolId ? "active" : "unregistered"),
       burn: buyback,
       volume: Number(team.volume ?? 0),
       marketCap: Number(team.marketCap ?? 0)
@@ -128,7 +129,7 @@ function createTeamCard(team, index) {
 
   const pool = document.createElement("div");
   pool.className = "pool";
-  pool.textContent = `Pool ${team.pool}`;
+  pool.textContent = team.poolStatus === "removed" ? `Pool removed ${team.pool}` : `Pool ${team.pool}`;
 
   main.append(title, stats, pool);
   card.append(rank, flag, main);
