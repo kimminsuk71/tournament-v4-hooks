@@ -36,7 +36,7 @@ Uniswap v4 derives hook permissions from the low bits of the hook contract addre
 - `AFTER_SWAP_FLAG`
 - `AFTER_SWAP_RETURNS_DELTA_FLAG`
 
-The unit tests call `afterSwap` directly through a mock manager because they validate accounting, not CREATE2 address mining.
+The unit tests validate both accounting and CREATE2 address mining. Swap-path tests call `afterSwap` through a mock manager, while deployer tests mine a valid hook address.
 
 ## Frontend Shape
 
@@ -49,7 +49,6 @@ The website can stay static:
 
 ## Next Implementation Steps
 
-- Add a CREATE2 hook deployer that mines valid permission bits.
 - Add a real swap executor using Universal Router or a dedicated v4 route.
 - Add pool creation scripts.
-- Add a small indexer for events and a static leaderboard frontend.
+- Extend the event indexer with price and volume feeds.

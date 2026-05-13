@@ -12,11 +12,14 @@ import {BalanceDelta} from "v4-core/types/BalanceDelta.sol";
 import {BeforeSwapDelta} from "v4-core/types/BeforeSwapDelta.sol";
 import {Currency} from "v4-core/types/Currency.sol";
 import {Hooks} from "v4-core/libraries/Hooks.sol";
+import {LPFeeLibrary} from "v4-core/libraries/LPFeeLibrary.sol";
 import {SafeCast} from "v4-core/libraries/SafeCast.sol";
+import {TickMath} from "v4-core/libraries/TickMath.sol";
 import {BuybackVault} from "./BuybackVault.sol";
 
 contract TournamentHook is IHooks {
     using PoolIdLibrary for PoolKey;
+    using LPFeeLibrary for uint24;
     using SafeCast for uint256;
     using SafeCast for int128;
     using SafeERC20 for IERC20;
@@ -33,6 +36,8 @@ contract TournamentHook is IHooks {
     error InvalidSwapDelta();
     error HookNotEnabled();
     error PoolAlreadyRegistered(PoolId poolId);
+    error InvalidPoolFee();
+    error InvalidTickSpacing();
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event PoolRegistered(PoolId indexed poolId, address indexed currency0, address indexed currency1);
@@ -67,6 +72,7 @@ contract TournamentHook is IHooks {
         if (address(manager_) == address(0) || address(vault_) == address(0) || owner_ == address(0)) {
             revert InvalidAddress();
         }
+        if (address(manager_).code.length == 0 || address(vault_).code.length == 0) revert InvalidAddress();
         if (feeBips_ > 2_000) revert InvalidBips();
 
         Hooks.validateHookPermissions(
@@ -175,6 +181,10 @@ contract TournamentHook is IHooks {
         address currency1 = Currency.unwrap(key.currency1);
         if (currency0 == address(0) || currency1 == address(0)) revert NativeCurrencyUnsupported();
         if (currency0 >= currency1) revert CurrenciesOutOfOrder();
+        if (!key.fee.isValid() && !key.fee.isDynamicFee()) revert InvalidPoolFee();
+        if (key.tickSpacing < TickMath.MIN_TICK_SPACING || key.tickSpacing > TickMath.MAX_TICK_SPACING) {
+            revert InvalidTickSpacing();
+        }
     }
 
     function beforeInitialize(address, PoolKey calldata, uint160) external pure override returns (bytes4) {

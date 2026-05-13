@@ -12,6 +12,8 @@ import {SwapParams} from "v4-core/types/PoolOperation.sol";
 import {BalanceDelta, toBalanceDelta} from "v4-core/types/BalanceDelta.sol";
 import {Currency} from "v4-core/types/Currency.sol";
 import {Hooks} from "v4-core/libraries/Hooks.sol";
+import {LPFeeLibrary} from "v4-core/libraries/LPFeeLibrary.sol";
+import {TickMath} from "v4-core/libraries/TickMath.sol";
 import {HubToken} from "../src/HubToken.sol";
 import {TeamToken} from "../src/TeamToken.sol";
 import {TeamTokenFactory} from "../src/TeamTokenFactory.sol";
@@ -122,6 +124,14 @@ contract TournamentHookTest is Test {
         factory.createTeamToken("usa", "United States 2", "USA2", address(this), 100e18);
     }
 
+    function testFactoryRejectsRenounceOwnership() public {
+        TeamTokenFactory factory = new TeamTokenFactory(owner);
+
+        vm.prank(owner);
+        vm.expectRevert(TeamTokenFactory.RenounceOwnershipDisabled.selector);
+        factory.renounceOwnership();
+    }
+
     function testHubMintingIsDisabled() public {
         vm.expectRevert(HubToken.MintingDisabled.selector);
         hub.mint(address(this), 1e18);
@@ -137,12 +147,29 @@ contract TournamentHookTest is Test {
         new HubToken("Bad Hub", "BAD", address(this), 0);
     }
 
+    function testHubConstructorRejectsEmptyMetadata() public {
+        vm.expectRevert(HubToken.InvalidAmount.selector);
+        new HubToken("", "BAD", address(this), 1e18);
+
+        vm.expectRevert(HubToken.InvalidAmount.selector);
+        new HubToken("Bad Hub", "", address(this), 1e18);
+    }
+
     function testTeamTokenConstructorRejectsInvalidInputs() public {
         vm.expectRevert(TeamToken.InvalidAddress.selector);
         new TeamToken("bad", "Bad", "BAD", address(0), 1e18);
 
         vm.expectRevert(TeamToken.InvalidAmount.selector);
         new TeamToken("bad", "Bad", "BAD", address(this), 0);
+
+        vm.expectRevert(TeamToken.InvalidAmount.selector);
+        new TeamToken("", "Bad", "BAD", address(this), 1e18);
+
+        vm.expectRevert(TeamToken.InvalidAmount.selector);
+        new TeamToken("bad", "", "BAD", address(this), 1e18);
+
+        vm.expectRevert(TeamToken.InvalidAmount.selector);
+        new TeamToken("bad", "Bad", "", address(this), 1e18);
     }
 
     function testFactoryRejectsInvalidTokenOwnerAndSupply() public {
@@ -155,6 +182,14 @@ contract TournamentHookTest is Test {
         vm.prank(owner);
         vm.expectRevert(TeamTokenFactory.InvalidAmount.selector);
         factory.createTeamToken("zero-supply", "Zero Supply", "ZERO", address(this), 0);
+
+        vm.prank(owner);
+        vm.expectRevert(TeamTokenFactory.InvalidAmount.selector);
+        factory.createTeamToken("empty-name", "", "EMPTY", address(this), 100e18);
+
+        vm.prank(owner);
+        vm.expectRevert(TeamTokenFactory.InvalidAmount.selector);
+        factory.createTeamToken("empty-symbol", "Empty Symbol", "", address(this), 100e18);
     }
 
     function testAfterSwapRoutesFeeHalfToBuybackHalfToTreasury() public {
@@ -293,6 +328,34 @@ contract TournamentHookTest is Test {
         hook.registerPool(unsortedKey);
     }
 
+    function testRegisterPoolRejectsInvalidFeeAndTickSpacing() public {
+        (Currency currency0, Currency currency1) = _sort(address(team), address(quote));
+        PoolKey memory key = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: LPFeeLibrary.MAX_LP_FEE + 1,
+            tickSpacing: 60,
+            hooks: IHooks(address(hook))
+        });
+
+        vm.prank(owner);
+        vm.expectRevert(TournamentHook.InvalidPoolFee.selector);
+        hook.registerPool(key);
+
+        key.fee = LPFeeLibrary.DYNAMIC_FEE_FLAG;
+        key.tickSpacing = TickMath.MIN_TICK_SPACING - 1;
+
+        vm.prank(owner);
+        vm.expectRevert(TournamentHook.InvalidTickSpacing.selector);
+        hook.registerPool(key);
+
+        key.tickSpacing = TickMath.MAX_TICK_SPACING + 1;
+
+        vm.prank(owner);
+        vm.expectRevert(TournamentHook.InvalidTickSpacing.selector);
+        hook.registerPool(key);
+    }
+
     function testRegisterAndRemovePoolStateGuards() public {
         (Currency currency0, Currency currency1) = _sort(address(team), address(quote));
         PoolKey memory key = PoolKey({
@@ -319,6 +382,26 @@ contract TournamentHookTest is Test {
     function testConstructorRejectsNonPermissionedHookAddress() public {
         vm.expectRevert();
         new TournamentHook(IPoolManager(address(manager)), vault, owner, 100);
+    }
+
+    function testConstructorRejectsEoaDependenciesAtPermissionedAddress() public {
+        HookDeployer deployer = new HookDeployer(address(this));
+        bytes memory creationCode = abi.encodePacked(
+            type(TournamentHook).creationCode, abi.encode(IPoolManager(address(0xBEEF)), vault, owner, uint16(100))
+        );
+        bytes32 initCodeHash = keccak256(creationCode);
+
+        for (uint256 i = 0; i < 250_000; i++) {
+            bytes32 salt = bytes32(i);
+            address predicted =
+                address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), deployer, salt, initCodeHash)))));
+            if ((uint160(predicted) & Hooks.ALL_HOOK_MASK) == REQUIRED_FLAGS) {
+                vm.expectRevert(HookDeployer.DeploymentFailed.selector);
+                deployer.deploy(salt, creationCode);
+                return;
+            }
+        }
+        revert("NO_SALT_FOUND");
     }
 
     function testBuybackRevertsIfExecutorDoesNotSpendFullFeeAmount() public {
@@ -405,6 +488,11 @@ contract TournamentHookTest is Test {
         vm.prank(owner);
         vm.expectRevert(BuybackVault.InvalidAddress.selector);
         freshVault.setHook(address(0x1234));
+    }
+
+    function testVaultRejectsEoaHubToken() public {
+        vm.expectRevert(BuybackVault.InvalidAddress.selector);
+        new BuybackVault(address(0x1234), owner, treasury);
     }
 
     function testVaultRejectsTreasuryAsVault() public {

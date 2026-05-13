@@ -18,6 +18,9 @@ contract TeamToken is ERC20 {
     ) ERC20(name_, symbol_) {
         if (owner_ == address(0)) revert InvalidAddress();
         if (initialSupply == 0) revert InvalidAmount();
+        if (bytes(teamId_).length == 0 || bytes(name_).length == 0 || bytes(symbol_).length == 0) {
+            revert InvalidAmount();
+        }
         teamId = teamId_;
         _mint(owner_, initialSupply);
     }

@@ -19,7 +19,7 @@ contract HookDeployerTest is Test {
         HookDeployer deployer = new HookDeployer(owner);
 
         bytes memory creationCode = abi.encodePacked(
-            type(TournamentHook).creationCode, abi.encode(IPoolManager(address(0xBEEF)), vault, owner, uint16(100))
+            type(TournamentHook).creationCode, abi.encode(IPoolManager(address(deployer)), vault, owner, uint16(100))
         );
         bytes32 initCodeHash = keccak256(creationCode);
         (bytes32 salt, address predicted) = _mineSalt(address(deployer), initCodeHash, 250_000);

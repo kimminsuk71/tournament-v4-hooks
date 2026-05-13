@@ -14,6 +14,7 @@ contract HubToken is ERC20, ERC20Burnable {
     {
         if (owner_ == address(0)) revert InvalidAddress();
         if (initialSupply == 0) revert InvalidAmount();
+        if (bytes(name_).length == 0 || bytes(symbol_).length == 0) revert InvalidAmount();
         _mint(owner_, initialSupply);
     }
 

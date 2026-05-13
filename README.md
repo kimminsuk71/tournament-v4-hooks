@@ -37,12 +37,14 @@ Current test coverage:
 
 - team token factory creation and duplicate guard
 - token constructor zero-owner and zero-supply guards
+- token constructor empty metadata guards
 - hook swap fee routing
 - disabled hook entrypoints revert
 - ownership transfer and registered-pool state guards
 - buyback executor path and hub token burn
 - exact-output rejection
 - pool registration hook-address mismatch rejection
+- pool registration v4 fee and tick-spacing rejection
 - duplicate pool registration and duplicate removal rejection
 - buyback executor underpayment rejection
 - EOA buyback executor rejection
@@ -51,6 +53,7 @@ Current test coverage:
 - vault ownership renounce rejection
 - zero-amount fee deposit rejection
 - extreme signed swap delta rejection without arithmetic panic
+- EOA manager, vault, and hub-token dependency rejection
 - CREATE2 hook salt mining and deployed address prediction
 - CREATE2 init code that deploys no runtime code rejection
 
@@ -72,13 +75,16 @@ This is still an experiment, but the current implementation enforces the main in
 - only the configured v4 `PoolManager` can call `afterSwap`
 - only pools whose `PoolKey.hooks` equals the deployed hook can be registered
 - registered pool currencies must be non-native ERC20 addresses and sorted as v4 expects
+- registered pools must use a valid v4 static fee or dynamic fee sentinel and tick spacing in the v4 range
 - fee bips are capped at 20%
 - hook fee accounting rejects non-output swap deltas
 - hook ownership transfers emit `OwnershipTransferred` and preserve only-owner enforcement
 - pool registration is a one-way state transition until explicit removal; duplicate register/remove calls revert
 - `HubToken` and `TeamToken` do not expose owner-only minting after construction
+- `HubToken` and `TeamToken` reject empty deployment metadata
 - `HookDeployer` is owner-gated to prevent third parties from occupying salts and rejects deployments with empty runtime code
-- team token creation rejects zero owner and zero initial supply
+- team token creation rejects zero owner, zero initial supply, and empty metadata
+- `TeamTokenFactory` ownership cannot be renounced because that would permanently disable team creation
 - vault hook address can only be set once and must point to deployed code
 - vault ownership cannot be renounced because that would permanently disable buyback execution and treasury updates
 - vault rejects fee-on-transfer or rebasing behavior that causes short receipt

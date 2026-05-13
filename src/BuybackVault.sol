@@ -46,6 +46,7 @@ contract BuybackVault is Ownable, ReentrancyGuard {
         if (hubToken_ == address(0) || owner_ == address(0) || treasury_ == address(0) || treasury_ == address(this)) {
             revert InvalidAddress();
         }
+        if (hubToken_.code.length == 0) revert InvalidAddress();
         hubToken = hubToken_;
         treasury = treasury_;
     }

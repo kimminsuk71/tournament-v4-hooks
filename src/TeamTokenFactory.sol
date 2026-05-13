@@ -9,6 +9,7 @@ contract TeamTokenFactory is Ownable {
     error EmptyTeamId();
     error InvalidAddress();
     error InvalidAmount();
+    error RenounceOwnershipDisabled();
 
     event TeamTokenCreated(bytes32 indexed teamKey, string teamId, address indexed token, address indexed owner);
 
@@ -16,6 +17,10 @@ contract TeamTokenFactory is Ownable {
     address[] public allTeamTokens;
 
     constructor(address owner_) Ownable(owner_) {}
+
+    function renounceOwnership() public view override onlyOwner {
+        revert RenounceOwnershipDisabled();
+    }
 
     function createTeamToken(
         string calldata teamId,
@@ -27,6 +32,7 @@ contract TeamTokenFactory is Ownable {
         if (bytes(teamId).length == 0) revert EmptyTeamId();
         if (tokenOwner == address(0)) revert InvalidAddress();
         if (initialSupply == 0) revert InvalidAmount();
+        if (bytes(name).length == 0 || bytes(symbol).length == 0) revert InvalidAmount();
         bytes32 key = keccak256(bytes(teamId));
         if (teamTokenOf[key] != address(0)) revert TeamAlreadyCreated(key);
 
