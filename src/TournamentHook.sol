@@ -140,7 +140,7 @@ contract TournamentHook is IHooks {
         onlyManager
         returns (bytes4, int128)
     {
-        if (params.amountSpecified > 0) revert ExactOutputUnsupported();
+        if (params.amountSpecified >= 0) revert ExactOutputUnsupported();
 
         PoolId poolId = key.toId();
         if (!isRegisteredPool[poolId]) revert PoolNotRegistered(poolId);

@@ -18,7 +18,7 @@ For every exact-input swap on a registered pool:
 2. The hook pulls that fee from the v4 `PoolManager`.
 3. 50% is deposited into `BuybackVault.pendingBuyback`.
 4. 50% is sent to `treasury`.
-5. The owner or keeper later calls `executeBuybackAndBurn` with a buyback executor.
+5. The vault owner later calls `executeBuybackAndBurn` with a buyback executor.
 
 Exact-output swaps currently revert in the hook. Uniswap v4 `afterSwapReturnDelta` charges the unspecified currency; for exact-output swaps that would be the input token, which does not match this prototype's "fee from output token" rule.
 
@@ -44,6 +44,7 @@ Current test coverage:
 - ownership transfer system-address rejection
 - buyback executor path and hub token burn
 - exact-output rejection
+- zero-amount swap rejection
 - pool registration hook-address mismatch rejection
 - pool registration v4 fee and tick-spacing rejection
 - duplicate pool registration and duplicate removal rejection
@@ -99,12 +100,13 @@ This is still an experiment, but the current implementation enforces the main in
 - buyback executors must spend the exact fee-token amount and deliver the exact reported `HUB` amount
 - pending `HUB` can be burned directly without routing through an external executor
 - the frontend renders generated data through DOM text nodes rather than `innerHTML`
-- the event indexer treats `pendingBuyback` as deposits minus burned fee-token inventory
+- the event indexer treats hub-level `pendingBuyback` as deposits minus burned fee-token inventory
+- per-team buyback display is gross routed buyback inventory because burn events are keyed by fee token, not pool id
 - the event indexer preserves removed pool history and marks it with `poolStatus`
 - deployment and indexing scripts validate common malformed inputs before broadcasting or querying
 - helper scripts reject out-of-range hook fee settings, invalid addresses, invalid block numbers, zero salt-search windows, and integer casts that would truncate before encoding or broadcasting
 
-Indexer caveat: `BuybackBurned` is keyed by fee token, not pool id, so hub-level pending buyback is authoritative, while per-team pending is only exact when a fee token maps to one registered team pool.
+Indexer caveat: `BuybackBurned` is keyed by fee token, not pool id. Hub-level pending buyback is authoritative. Per-team buyback display is gross routed inventory, not net post-burn pending.
 
 ## Testnet Flow
 

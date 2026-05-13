@@ -273,6 +273,22 @@ contract TournamentHookTest is Test {
         manager.callAfterSwap(hook, key, params, delta);
     }
 
+    function testZeroSpecifiedSwapReverts() public {
+        (Currency currency0, Currency currency1) = _sort(address(team), address(quote));
+        PoolKey memory key = PoolKey({
+            currency0: currency0, currency1: currency1, fee: 3_000, tickSpacing: 60, hooks: IHooks(address(hook))
+        });
+
+        vm.prank(owner);
+        hook.registerPool(key);
+
+        SwapParams memory params = SwapParams({zeroForOne: true, amountSpecified: 0, sqrtPriceLimitX96: 0});
+        BalanceDelta delta = toBalanceDelta(0, 0);
+
+        vm.expectRevert(TournamentHook.ExactOutputUnsupported.selector);
+        manager.callAfterSwap(hook, key, params, delta);
+    }
+
     function testDisabledHookMethodsRevert() public {
         (Currency currency0, Currency currency1) = _sort(address(team), address(quote));
         PoolKey memory key = PoolKey({
