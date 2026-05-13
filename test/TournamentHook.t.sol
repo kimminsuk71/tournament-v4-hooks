@@ -124,6 +124,19 @@ contract TournamentHookTest is Test {
         hub.mint(address(this), 1e18);
     }
 
+    function testHubConstructorRejectsZeroOwner() public {
+        vm.expectRevert(HubToken.InvalidAddress.selector);
+        new HubToken("Bad Hub", "BAD", address(0), 1e18);
+    }
+
+    function testTeamTokenConstructorRejectsInvalidInputs() public {
+        vm.expectRevert(TeamToken.InvalidAddress.selector);
+        new TeamToken("bad", "Bad", "BAD", address(0), 1e18);
+
+        vm.expectRevert(TeamToken.InvalidAmount.selector);
+        new TeamToken("bad", "Bad", "BAD", address(this), 0);
+    }
+
     function testFactoryRejectsInvalidTokenOwnerAndSupply() public {
         TeamTokenFactory factory = new TeamTokenFactory(owner);
 

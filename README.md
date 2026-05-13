@@ -64,7 +64,7 @@ This is still an experiment, but the current implementation enforces the main in
 - registered pool currencies must be non-native ERC20 addresses and sorted as v4 expects
 - fee bips are capped at 20%
 - hook fee accounting rejects non-output swap deltas
-- `HubToken` has no post-deploy mint path
+- `HubToken` and `TeamToken` do not expose owner-only minting after construction
 - `HookDeployer` is owner-gated to prevent third parties from occupying salts
 - team token creation rejects zero owner and zero initial supply
 - vault hook address can only be set once
@@ -73,6 +73,9 @@ This is still an experiment, but the current implementation enforces the main in
 - pending `HUB` can be burned directly without routing through an external executor
 - the frontend renders generated data through DOM text nodes rather than `innerHTML`
 - the event indexer treats `pendingBuyback` as deposits minus burned fee-token inventory
+- deployment and indexing scripts validate common malformed inputs before broadcasting or querying
+
+Indexer caveat: `BuybackBurned` is keyed by fee token, not pool id, so hub-level pending buyback is authoritative, while per-team pending is only exact when a fee token maps to one registered team pool.
 
 ## Testnet Flow
 

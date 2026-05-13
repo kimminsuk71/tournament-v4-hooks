@@ -32,7 +32,7 @@ contract TournamentHook is IHooks {
     error CurrenciesOutOfOrder();
     error InvalidSwapDelta();
 
-    event PoolRegistered(PoolId indexed poolId, address indexed teamToken, address indexed quoteToken);
+    event PoolRegistered(PoolId indexed poolId, address indexed currency0, address indexed currency1);
     event PoolRegistrationRemoved(PoolId indexed poolId);
     event SwapFeeRouted(
         PoolId indexed poolId,

@@ -17,6 +17,9 @@ contract RegisterPool is Script {
         uint24 lpFee = uint24(vm.envOr("LP_FEE", uint256(3_000)));
         int24 tickSpacing = int24(int256(vm.envOr("TICK_SPACING", uint256(60))));
 
+        require(tokenA != address(0) && tokenB != address(0), "ZERO_TOKEN");
+        require(tokenA != tokenB, "IDENTICAL_TOKENS");
+
         (address currency0, address currency1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         PoolKey memory key = PoolKey({
             currency0: Currency.wrap(currency0),

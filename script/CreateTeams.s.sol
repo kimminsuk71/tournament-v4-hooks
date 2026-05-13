@@ -22,6 +22,9 @@ contract CreateTeams is Script {
 
         vm.startBroadcast(privateKey);
         for (uint256 i = 0; i < ids.length; i++) {
+            require(bytes(ids[i]).length != 0, "EMPTY_TEAM_ID");
+            require(bytes(names[i]).length != 0, "EMPTY_TEAM_NAME");
+            require(bytes(symbols[i]).length != 0, "EMPTY_TEAM_SYMBOL");
             address token =
                 TeamTokenFactory(factory).createTeamToken(ids[i], names[i], symbols[i], tokenOwner, initialSupply);
             console2.log(ids[i], token);
