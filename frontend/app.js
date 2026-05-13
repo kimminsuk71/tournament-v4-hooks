@@ -20,6 +20,7 @@ function compact(value) {
 
 function flagUrl(code) {
   const normalized = String(code ?? "").toLowerCase();
+  if (!/^[a-z]{2}$/.test(normalized)) return "";
   return `https://flagcdn.com/w80/${encodeURIComponent(normalized)}.png`;
 }
 
@@ -101,7 +102,8 @@ function createTeamCard(team, index) {
 
   const flag = document.createElement("img");
   flag.className = "flag";
-  flag.src = flagUrl(team.countryCode);
+  const src = flagUrl(team.countryCode);
+  if (src) flag.src = src;
   flag.alt = "";
   flag.loading = "lazy";
 

@@ -43,11 +43,12 @@ contract BuybackVault is Ownable, ReentrancyGuard {
     }
 
     constructor(address hubToken_, address owner_, address treasury_) Ownable(owner_) {
-        if (hubToken_ == address(0) || owner_ == address(0) || treasury_ == address(0) || treasury_ == address(this)) {
+        if (hubToken_ == address(0) || owner_ == address(0) || treasury_ == address(0)) {
             revert InvalidAddress();
         }
         if (hubToken_.code.length == 0) revert InvalidAddress();
         hubToken = hubToken_;
+        _validateTreasury(treasury_);
         treasury = treasury_;
     }
 
@@ -60,7 +61,7 @@ contract BuybackVault is Ownable, ReentrancyGuard {
     }
 
     function setTreasury(address treasury_) external onlyOwner {
-        if (treasury_ == address(0) || treasury_ == address(this)) revert InvalidAddress();
+        _validateTreasury(treasury_);
         treasury = treasury_;
         emit TreasurySet(treasury_);
     }
@@ -131,5 +132,11 @@ contract BuybackVault is Ownable, ReentrancyGuard {
         totalHubBurned += amount;
 
         emit BuybackBurned(hubToken, address(0), amount, amount);
+    }
+
+    function _validateTreasury(address treasury_) internal view {
+        if (treasury_ == address(0) || treasury_ == address(this) || treasury_ == hubToken || treasury_ == hook) {
+            revert InvalidAddress();
+        }
     }
 }

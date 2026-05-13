@@ -41,6 +41,7 @@ Current test coverage:
 - hook swap fee routing
 - disabled hook entrypoints revert
 - ownership transfer and registered-pool state guards
+- ownership transfer system-address rejection
 - buyback executor path and hub token burn
 - exact-output rejection
 - pool registration hook-address mismatch rejection
@@ -54,6 +55,8 @@ Current test coverage:
 - zero-amount fee deposit rejection
 - extreme signed swap delta rejection without arithmetic panic
 - EOA manager, vault, and hub-token dependency rejection
+- canonical lowercase team id validation
+- treasury self, hook, and hub-token rejection
 - CREATE2 hook salt mining and deployed address prediction
 - CREATE2 init code that deploys no runtime code rejection
 
@@ -79,14 +82,17 @@ This is still an experiment, but the current implementation enforces the main in
 - fee bips are capped at 20%
 - hook fee accounting rejects non-output swap deltas
 - hook ownership transfers emit `OwnershipTransferred` and preserve only-owner enforcement
+- hook ownership cannot be transferred to the hook, pool manager, or vault contracts
 - pool registration is a one-way state transition until explicit removal; duplicate register/remove calls revert
 - `HubToken` and `TeamToken` do not expose owner-only minting after construction
 - `HubToken` and `TeamToken` reject empty deployment metadata
 - `HookDeployer` is owner-gated to prevent third parties from occupying salts and rejects deployments with empty runtime code
 - team token creation rejects zero owner, zero initial supply, and empty metadata
+- team ids are restricted to lowercase letters, digits, and hyphens to prevent case/format duplicates
 - `TeamTokenFactory` ownership cannot be renounced because that would permanently disable team creation
 - vault hook address can only be set once and must point to deployed code
 - vault ownership cannot be renounced because that would permanently disable buyback execution and treasury updates
+- vault treasury cannot be the vault, hook, or hub token contract
 - vault rejects fee-on-transfer or rebasing behavior that causes short receipt
 - vault rejects EOAs as buyback executors so buybacks must go through contract code
 - buyback executors must spend the exact fee-token amount and deliver the exact reported `HUB` amount

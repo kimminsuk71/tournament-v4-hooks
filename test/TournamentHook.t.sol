@@ -192,6 +192,22 @@ contract TournamentHookTest is Test {
         factory.createTeamToken("empty-symbol", "Empty Symbol", "", address(this), 100e18);
     }
 
+    function testFactoryRejectsNonCanonicalTeamIds() public {
+        TeamTokenFactory factory = new TeamTokenFactory(owner);
+
+        vm.prank(owner);
+        vm.expectRevert(TeamTokenFactory.InvalidTeamId.selector);
+        factory.createTeamToken("USA", "United States", "USA", address(this), 100e18);
+
+        vm.prank(owner);
+        vm.expectRevert(TeamTokenFactory.InvalidTeamId.selector);
+        factory.createTeamToken("usa_world", "United States", "USA", address(this), 100e18);
+
+        vm.prank(owner);
+        address token = factory.createTeamToken("usa-2026", "United States", "USA", address(this), 100e18);
+        assertEq(TeamToken(token).teamId(), "usa-2026");
+    }
+
     function testAfterSwapRoutesFeeHalfToBuybackHalfToTreasury() public {
         (PoolKey memory key, SwapParams memory params, BalanceDelta delta, address feeToken) =
             _registeredExactInPoolWithFeeCurrency(address(quote), 1_000e18);
@@ -284,6 +300,20 @@ contract TournamentHookTest is Test {
         vm.prank(nextOwner);
         hook.setFeeBips(50);
         assertEq(hook.feeBips(), 50);
+    }
+
+    function testTransferOwnershipRejectsSystemAddresses() public {
+        vm.prank(owner);
+        vm.expectRevert(TournamentHook.InvalidAddress.selector);
+        hook.transferOwnership(address(hook));
+
+        vm.prank(owner);
+        vm.expectRevert(TournamentHook.InvalidAddress.selector);
+        hook.transferOwnership(address(manager));
+
+        vm.prank(owner);
+        vm.expectRevert(TournamentHook.InvalidAddress.selector);
+        hook.transferOwnership(address(vault));
     }
 
     function testRegisterPoolRejectsDifferentHookAddress() public {
@@ -499,6 +529,16 @@ contract TournamentHookTest is Test {
         vm.prank(owner);
         vm.expectRevert(BuybackVault.InvalidAddress.selector);
         vault.setTreasury(address(vault));
+    }
+
+    function testVaultRejectsTreasuryAsHubOrHook() public {
+        vm.prank(owner);
+        vm.expectRevert(BuybackVault.InvalidAddress.selector);
+        vault.setTreasury(address(hub));
+
+        vm.prank(owner);
+        vm.expectRevert(BuybackVault.InvalidAddress.selector);
+        vault.setTreasury(address(hook));
     }
 
     function testVaultRejectsRenounceOwnership() public {

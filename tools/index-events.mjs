@@ -41,6 +41,14 @@ function normalizeOptionalAddress(value, label) {
   return getAddress(value).toLowerCase();
 }
 
+function parseDecimals(value, label) {
+  const decimals = value ?? 18;
+  if (!Number.isInteger(decimals) || decimals < 0 || decimals > 255) {
+    fail(`${label} must be an integer between 0 and 255`);
+  }
+  return decimals;
+}
+
 const rpcUrl = arg("rpc-url");
 const hook = parseAddress("hook");
 const vault = parseAddress("vault");
@@ -58,10 +66,14 @@ if (!Array.isArray(teams.teams) || !teams.hub || !Array.isArray(teams.matches)) 
   console.error(`${teamsPath} must contain hub, teams[], and matches[]`);
   process.exit(1);
 }
+const hubDecimals = parseDecimals(teams.hub.decimals, "hub.decimals");
+const normalizedTeams = teams.teams.map((team) => ({
+  ...team,
+  token: normalizeOptionalAddress(team.token, `teams[].token for ${team.id ?? team.name ?? "unknown team"}`),
+  decimals: parseDecimals(team.decimals, `teams[].decimals for ${team.id ?? team.name ?? "unknown team"}`)
+}));
 const teamTokens = new Set(
-  teams.teams
-    .map((team) => normalizeOptionalAddress(team.token, `teams[].token for ${team.id ?? team.name ?? "unknown team"}`))
-    .filter(Boolean)
+  normalizedTeams.map((team) => team.token).filter(Boolean)
 );
 const provider = new JsonRpcProvider(rpcUrl);
 const latest = await provider.getBlockNumber();
@@ -121,8 +133,8 @@ for (const log of logs) {
   }
 }
 
-const enriched = teams.teams.map((team) => {
-  const token = (team.token ?? "").toLowerCase();
+const enriched = normalizedTeams.map((team) => {
+  const token = team.token ?? "";
   const pool = token ? [...byPool.values()].find((item) => item.registered !== false && item.teamToken === token) : null;
   const grossBuyback = pool?.buyback ?? 0n;
   const burnedFeeAmount = pool?.feeToken ? burnedByFeeToken.get(pool.feeToken) ?? 0n : 0n;
@@ -132,8 +144,8 @@ const enriched = teams.teams.map((team) => {
     poolId: pool?.poolId ?? team.poolId ?? null,
     buybackRaw: pendingBuyback.toString(),
     treasuryRaw: pool?.treasury?.toString() ?? "0",
-    buybackDisplay: formatUnits(pendingBuyback, team.decimals ?? 18),
-    treasuryDisplay: formatUnits(pool?.treasury ?? 0n, team.decimals ?? 18)
+    buybackDisplay: formatUnits(pendingBuyback, team.decimals),
+    treasuryDisplay: formatUnits(pool?.treasury ?? 0n, team.decimals)
   };
 });
 
@@ -160,9 +172,10 @@ const payload = {
     totalBurnedRaw: totalBurned.toString(),
     pendingBuybackRaw: pendingBuybackTotal.toString(),
     treasuryRoutedRaw: totalTreasury.toString(),
-    totalBurnedDisplay: formatUnits(totalBurned, teams.hub.decimals ?? 18),
-    pendingBuybackDisplay: formatUnits(pendingBuybackTotal, teams.hub.decimals ?? 18),
-    treasuryRoutedDisplay: formatUnits(totalTreasury, teams.hub.decimals ?? 18)
+    decimals: hubDecimals,
+    totalBurnedDisplay: formatUnits(totalBurned, hubDecimals),
+    pendingBuybackDisplay: formatUnits(pendingBuybackTotal, hubDecimals),
+    treasuryRoutedDisplay: formatUnits(totalTreasury, hubDecimals)
   },
   teams: enriched,
   matches: teams.matches

@@ -104,6 +104,9 @@ contract TournamentHook is IHooks {
 
     function transferOwnership(address nextOwner) external onlyOwner {
         if (nextOwner == address(0)) revert InvalidAddress();
+        if (nextOwner == address(this) || nextOwner == address(manager) || nextOwner == address(vault)) {
+            revert InvalidAddress();
+        }
         address previousOwner = owner;
         owner = nextOwner;
         emit OwnershipTransferred(previousOwner, nextOwner);
