@@ -11,6 +11,10 @@ contract CreateTeams is Script {
         address tokenOwner = vm.envOr("TOKEN_OWNER", vm.addr(privateKey));
         uint256 initialSupply = vm.envOr("TEAM_INITIAL_SUPPLY", uint256(1_000_000_000e18));
 
+        require(factory != address(0), "ZERO_FACTORY");
+        require(tokenOwner != address(0), "ZERO_TOKEN_OWNER");
+        require(initialSupply != 0, "ZERO_INITIAL_SUPPLY");
+
         string memory idsCsv = vm.envOr("TEAM_IDS", string("alpha,bravo,delta,nova"));
         string memory namesCsv = vm.envOr("TEAM_NAMES", string("Alpha FC,Bravo United,Delta City,Nova Athletic"));
         string memory symbolsCsv = vm.envOr("TEAM_SYMBOLS", string("ALPHA,BRAVO,DELTA,NOVA"));

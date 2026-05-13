@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
-import { AbiCoder, concat, dataSlice, getCreate2Address, keccak256, toBeHex } from "ethers";
+import { AbiCoder, concat, dataSlice, getAddress, getCreate2Address, isAddress, keccak256, toBeHex } from "ethers";
 
 const flags = 0x0040n | 0x0004n;
 const mask = (1n << 14n) - 1n;
@@ -13,18 +13,32 @@ function arg(name, fallback) {
   return env ?? fallback;
 }
 
-const artifactPath = arg("artifact", "out/TournamentHook.sol/TournamentHook.json");
-const deployer = arg("deployer");
-const manager = arg("manager");
-const vault = arg("vault");
-const owner = arg("owner");
-const feeBips = BigInt(arg("fee-bips", "100"));
-const max = BigInt(arg("max", "1000000"));
-
-if (!deployer || !manager || !vault || !owner) {
-  console.error("Usage: mine-hook-salt --deployer=0x... --manager=0x... --vault=0x... --owner=0x... [--fee-bips=100]");
-  process.exit(1);
+function parseUintArg(name, fallback) {
+  const value = arg(name, fallback);
+  if (!/^\d+$/.test(value)) {
+    console.error(`--${name} must be a non-negative integer`);
+    process.exit(1);
+  }
+  return BigInt(value);
 }
+
+function parseAddressArg(name) {
+  const value = arg(name);
+  if (!value || !isAddress(value)) {
+    console.error(`--${name} must be a valid address`);
+    process.exit(1);
+  }
+  return getAddress(value);
+}
+
+const artifactPath = arg("artifact", "out/TournamentHook.sol/TournamentHook.json");
+const deployer = parseAddressArg("deployer");
+const manager = parseAddressArg("manager");
+const vault = parseAddressArg("vault");
+const owner = parseAddressArg("owner");
+const feeBips = parseUintArg("fee-bips", "100");
+const max = parseUintArg("max", "1000000");
+
 if (feeBips < 0n || feeBips > 2000n) {
   console.error("--fee-bips must be between 0 and 2000");
   process.exit(1);

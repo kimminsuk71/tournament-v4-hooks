@@ -25,6 +25,7 @@ contract HookDeployer {
             addr := create2(0, add(code, 0x20), mload(code), salt)
         }
         if (addr == address(0)) revert DeploymentFailed();
+        if (addr.code.length == 0) revert EmptyCode();
 
         emit Deployed(addr, salt);
     }

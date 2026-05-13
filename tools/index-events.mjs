@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { Interface, JsonRpcProvider, formatUnits } from "ethers";
+import { dirname } from "node:path";
+import { Interface, JsonRpcProvider, formatUnits, getAddress, isAddress } from "ethers";
 
 const topics = {
   PoolRegistered: "0xfafdbdd88ac30f0aa936e576be61816ea751908540523fa81b80c4a406ad7bec",
@@ -16,19 +17,38 @@ function arg(name, fallback) {
   return env ?? fallback;
 }
 
+function fail(message) {
+  console.error(message);
+  process.exit(1);
+}
+
+function parseAddress(name) {
+  const value = arg(name);
+  if (!value || !isAddress(value)) fail(`--${name} must be a valid address`);
+  return getAddress(value);
+}
+
+function parseBlockNumber(name, fallback) {
+  const value = arg(name, fallback);
+  if (!/^\d+$/.test(value)) fail(`--${name} must be a non-negative integer`);
+  return Number(value);
+}
+
+function normalizeOptionalAddress(value, label) {
+  if (value == null || value === "") return null;
+  if (!isAddress(value)) fail(`${label} must be a valid address or null`);
+  return getAddress(value).toLowerCase();
+}
+
 const rpcUrl = arg("rpc-url");
-const hook = arg("hook");
-const vault = arg("vault");
-const fromBlock = Number(arg("from-block", "0"));
+const hook = parseAddress("hook");
+const vault = parseAddress("vault");
+const fromBlock = parseBlockNumber("from-block", "0");
 const out = arg("out", "frontend/generated/board-data.json");
 const teamsPath = arg("teams", "config/teams.json");
 
-if (!rpcUrl || !hook || !vault) {
+if (!rpcUrl) {
   console.error("Usage: index-events --rpc-url=... --hook=0x... --vault=0x... [--from-block=0]");
-  process.exit(1);
-}
-if (!Number.isInteger(fromBlock) || fromBlock < 0) {
-  console.error("--from-block must be a non-negative integer");
   process.exit(1);
 }
 
@@ -38,7 +58,9 @@ if (!Array.isArray(teams.teams) || !teams.hub || !Array.isArray(teams.matches)) 
   process.exit(1);
 }
 const teamTokens = new Set(
-  teams.teams.map((team) => (team.token ?? "").toLowerCase()).filter((token) => /^0x[0-9a-f]{40}$/.test(token))
+  teams.teams
+    .map((team) => normalizeOptionalAddress(team.token, `teams[].token for ${team.id ?? team.name ?? "unknown team"}`))
+    .filter(Boolean)
 );
 const provider = new JsonRpcProvider(rpcUrl);
 const latest = await provider.getBlockNumber();
@@ -139,6 +161,6 @@ const payload = {
   matches: teams.matches
 };
 
-mkdirSync(out.split("/").slice(0, -1).join("/"), { recursive: true });
+mkdirSync(dirname(out), { recursive: true });
 writeFileSync(out, JSON.stringify(payload, null, 2));
 console.log(`Wrote ${out}`);

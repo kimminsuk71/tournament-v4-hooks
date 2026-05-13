@@ -39,6 +39,13 @@ contract HookDeployerTest is Test {
         deployer.deploy(bytes32(0), hex"00");
     }
 
+    function testRejectsInitCodeThatDeploysNoRuntime() public {
+        HookDeployer deployer = new HookDeployer(address(this));
+
+        vm.expectRevert(HookDeployer.EmptyCode.selector);
+        deployer.deploy(bytes32(0), hex"00");
+    }
+
     function _mineSalt(address deployer, bytes32 initCodeHash, uint256 maxIterations)
         internal
         pure

@@ -39,12 +39,20 @@ Current test coverage:
 - token constructor zero-owner and zero-supply guards
 - hook swap fee routing
 - disabled hook entrypoints revert
+- ownership transfer and registered-pool state guards
 - buyback executor path and hub token burn
 - exact-output rejection
 - pool registration hook-address mismatch rejection
+- duplicate pool registration and duplicate removal rejection
 - buyback executor underpayment rejection
+- EOA buyback executor rejection
+- EOA hook binding rejection
 - direct burn path when pending buyback inventory is already `HUB`
+- vault ownership renounce rejection
+- zero-amount fee deposit rejection
+- extreme signed swap delta rejection without arithmetic panic
 - CREATE2 hook salt mining and deployed address prediction
+- CREATE2 init code that deploys no runtime code rejection
 
 ## Important v4 Note
 
@@ -66,17 +74,21 @@ This is still an experiment, but the current implementation enforces the main in
 - registered pool currencies must be non-native ERC20 addresses and sorted as v4 expects
 - fee bips are capped at 20%
 - hook fee accounting rejects non-output swap deltas
+- hook ownership transfers emit `OwnershipTransferred` and preserve only-owner enforcement
+- pool registration is a one-way state transition until explicit removal; duplicate register/remove calls revert
 - `HubToken` and `TeamToken` do not expose owner-only minting after construction
-- `HookDeployer` is owner-gated to prevent third parties from occupying salts
+- `HookDeployer` is owner-gated to prevent third parties from occupying salts and rejects deployments with empty runtime code
 - team token creation rejects zero owner and zero initial supply
-- vault hook address can only be set once
+- vault hook address can only be set once and must point to deployed code
+- vault ownership cannot be renounced because that would permanently disable buyback execution and treasury updates
 - vault rejects fee-on-transfer or rebasing behavior that causes short receipt
+- vault rejects EOAs as buyback executors so buybacks must go through contract code
 - buyback executors must spend the exact fee-token amount and deliver the exact reported `HUB` amount
 - pending `HUB` can be burned directly without routing through an external executor
 - the frontend renders generated data through DOM text nodes rather than `innerHTML`
 - the event indexer treats `pendingBuyback` as deposits minus burned fee-token inventory
 - deployment and indexing scripts validate common malformed inputs before broadcasting or querying
-- helper scripts reject out-of-range hook fee settings before encoding or broadcasting
+- helper scripts reject out-of-range hook fee settings, invalid addresses, invalid block numbers, zero salt-search windows, and integer casts that would truncate before encoding or broadcasting
 
 Indexer caveat: `BuybackBurned` is keyed by fee token, not pool id, so hub-level pending buyback is authoritative, while per-team pending is only exact when a fee token maps to one registered team pool.
 

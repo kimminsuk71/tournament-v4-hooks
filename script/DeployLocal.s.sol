@@ -11,6 +11,9 @@ contract DeployLocal is Script {
         address owner = vm.envOr("OWNER", msg.sender);
         address treasury = vm.envOr("TREASURY", owner);
 
+        require(owner != address(0), "ZERO_OWNER");
+        require(treasury != address(0), "ZERO_TREASURY");
+
         vm.startBroadcast();
         hub = new HubToken("Tournament Hub", "HUB", owner, 1_000_000_000e18);
         vault = new BuybackVault(address(hub), owner, treasury);

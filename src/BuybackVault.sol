@@ -20,6 +20,7 @@ contract BuybackVault is Ownable, ReentrancyGuard {
     error HookAlreadySet();
     error FeeTokenNotReceived();
     error TreasuryTokenNotReceived();
+    error RenounceOwnershipDisabled();
 
     event HookSet(address indexed hook);
     event TreasurySet(address indexed treasury);
@@ -52,6 +53,7 @@ contract BuybackVault is Ownable, ReentrancyGuard {
     function setHook(address hook_) external onlyOwner {
         if (hook != address(0)) revert HookAlreadySet();
         if (hook_ == address(0)) revert InvalidAddress();
+        if (hook_.code.length == 0) revert InvalidAddress();
         hook = hook_;
         emit HookSet(hook_);
     }
@@ -62,8 +64,13 @@ contract BuybackVault is Ownable, ReentrancyGuard {
         emit TreasurySet(treasury_);
     }
 
+    function renounceOwnership() public view override onlyOwner {
+        revert RenounceOwnershipDisabled();
+    }
+
     function depositFee(address feeToken, uint256 buybackAmount, uint256 treasuryAmount) external onlyHook {
         if (feeToken == address(0)) revert InvalidAddress();
+        if (buybackAmount == 0 && treasuryAmount == 0) revert InvalidAmount();
 
         if (buybackAmount != 0) {
             uint256 vaultBalanceBefore = IERC20(feeToken).balanceOf(address(this));
@@ -93,6 +100,7 @@ contract BuybackVault is Ownable, ReentrancyGuard {
         returns (uint256 hubAmountOut)
     {
         if (feeToken == address(0) || executor == address(0)) revert InvalidAddress();
+        if (executor.code.length == 0) revert InvalidAddress();
         if (feeToken == hubToken) revert DirectHubBurnRequired();
         if (amountIn == 0 || amountIn > pendingBuyback[feeToken]) revert InvalidAmount();
 

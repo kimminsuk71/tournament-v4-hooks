@@ -32,7 +32,9 @@ contract TournamentHook is IHooks {
     error CurrenciesOutOfOrder();
     error InvalidSwapDelta();
     error HookNotEnabled();
+    error PoolAlreadyRegistered(PoolId poolId);
 
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event PoolRegistered(PoolId indexed poolId, address indexed currency0, address indexed currency1);
     event PoolRegistrationRemoved(PoolId indexed poolId);
     event SwapFeeRouted(
@@ -91,11 +93,14 @@ contract TournamentHook is IHooks {
         vault = vault_;
         owner = owner_;
         feeBips = feeBips_;
+        emit OwnershipTransferred(address(0), owner_);
     }
 
     function transferOwnership(address nextOwner) external onlyOwner {
         if (nextOwner == address(0)) revert InvalidAddress();
+        address previousOwner = owner;
         owner = nextOwner;
+        emit OwnershipTransferred(previousOwner, nextOwner);
     }
 
     function setFeeBips(uint16 feeBips_) external onlyOwner {
@@ -107,6 +112,7 @@ contract TournamentHook is IHooks {
     function registerPool(PoolKey calldata key) external onlyOwner returns (PoolId poolId) {
         _validatePoolKey(key);
         poolId = key.toId();
+        if (isRegisteredPool[poolId]) revert PoolAlreadyRegistered(poolId);
         isRegisteredPool[poolId] = true;
         emit PoolRegistered(poolId, Currency.unwrap(key.currency0), Currency.unwrap(key.currency1));
     }
@@ -114,6 +120,7 @@ contract TournamentHook is IHooks {
     function removePool(PoolKey calldata key) external onlyOwner returns (PoolId poolId) {
         _validatePoolKey(key);
         poolId = key.toId();
+        if (!isRegisteredPool[poolId]) revert PoolNotRegistered(poolId);
         isRegisteredPool[poolId] = false;
         emit PoolRegistrationRemoved(poolId);
     }
@@ -132,6 +139,7 @@ contract TournamentHook is IHooks {
         (Currency feeCurrency, int128 swapAmount) = _feeCurrencyAndAmount(key, params, delta);
         if (feeCurrency.isAddressZero()) revert NativeCurrencyUnsupported();
         if (swapAmount >= 0) revert InvalidSwapDelta();
+        if (swapAmount == type(int128).min) revert InvalidSwapDelta();
 
         uint256 absAmount = uint256((-swapAmount).toUint128());
         uint256 feeAmount = absAmount * feeBips / 10_000;

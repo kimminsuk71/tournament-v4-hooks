@@ -7,6 +7,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IHooks} from "v4-core/interfaces/IHooks.sol";
 import {IPoolManager} from "v4-core/interfaces/IPoolManager.sol";
 import {PoolKey} from "v4-core/types/PoolKey.sol";
+import {PoolIdLibrary} from "v4-core/types/PoolId.sol";
 import {SwapParams} from "v4-core/types/PoolOperation.sol";
 import {BalanceDelta, toBalanceDelta} from "v4-core/types/BalanceDelta.sol";
 import {Currency} from "v4-core/types/Currency.sol";
@@ -80,6 +81,8 @@ contract FeeOnTransferToken is TeamToken {
 }
 
 contract TournamentHookTest is Test {
+    using PoolIdLibrary for PoolKey;
+
     uint160 internal constant REQUIRED_FLAGS = Hooks.AFTER_SWAP_FLAG | Hooks.AFTER_SWAP_RETURNS_DELTA_FLAG;
 
     HubToken internal hub;
@@ -191,6 +194,18 @@ contract TournamentHookTest is Test {
         assertEq(quote.balanceOf(address(executor)), 5e18);
     }
 
+    function testBuybackRejectsEoaExecutor() public {
+        (PoolKey memory key, SwapParams memory params, BalanceDelta delta, address feeToken) =
+            _registeredExactInPoolWithFeeCurrency(address(quote), 1_000e18);
+
+        assertTrue(quote.transfer(address(manager), 20e18));
+        manager.callAfterSwap(hook, key, params, delta);
+
+        vm.prank(owner);
+        vm.expectRevert(BuybackVault.InvalidAddress.selector);
+        vault.executeBuybackAndBurn(feeToken, address(0x1234), 5e18, 1);
+    }
+
     function testExactOutputSwapReverts() public {
         (Currency currency0, Currency currency1) = _sort(address(team), address(quote));
         PoolKey memory key = PoolKey({
@@ -217,6 +232,23 @@ contract TournamentHookTest is Test {
 
         vm.expectRevert(TournamentHook.HookNotEnabled.selector);
         hook.beforeSwap(address(this), key, params, "");
+    }
+
+    function testTransferOwnershipUpdatesOwner() public {
+        address nextOwner = address(0xCAFE);
+
+        vm.prank(owner);
+        hook.transferOwnership(nextOwner);
+
+        assertEq(hook.owner(), nextOwner);
+
+        vm.prank(owner);
+        vm.expectRevert(TournamentHook.OnlyOwner.selector);
+        hook.setFeeBips(50);
+
+        vm.prank(nextOwner);
+        hook.setFeeBips(50);
+        assertEq(hook.feeBips(), 50);
     }
 
     function testRegisterPoolRejectsDifferentHookAddress() public {
@@ -261,6 +293,29 @@ contract TournamentHookTest is Test {
         hook.registerPool(unsortedKey);
     }
 
+    function testRegisterAndRemovePoolStateGuards() public {
+        (Currency currency0, Currency currency1) = _sort(address(team), address(quote));
+        PoolKey memory key = PoolKey({
+            currency0: currency0, currency1: currency1, fee: 3_000, tickSpacing: 60, hooks: IHooks(address(hook))
+        });
+
+        vm.prank(owner);
+        hook.registerPool(key);
+        assertTrue(hook.isRegisteredPool(key.toId()));
+
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(TournamentHook.PoolAlreadyRegistered.selector, key.toId()));
+        hook.registerPool(key);
+
+        vm.prank(owner);
+        hook.removePool(key);
+        assertFalse(hook.isRegisteredPool(key.toId()));
+
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(TournamentHook.PoolNotRegistered.selector, key.toId()));
+        hook.removePool(key);
+    }
+
     function testConstructorRejectsNonPermissionedHookAddress() public {
         vm.expectRevert();
         new TournamentHook(IPoolManager(address(manager)), vault, owner, 100);
@@ -300,6 +355,23 @@ contract TournamentHookTest is Test {
         manager.callAfterSwap(hook, key, params, delta);
     }
 
+    function testAfterSwapRejectsMinIntOutputDeltaWithoutPanic() public {
+        (Currency currency0, Currency currency1) = _sort(address(team), address(quote));
+        PoolKey memory key = PoolKey({
+            currency0: currency0, currency1: currency1, fee: 3_000, tickSpacing: 60, hooks: IHooks(address(hook))
+        });
+
+        vm.prank(owner);
+        hook.registerPool(key);
+
+        SwapParams memory params =
+            SwapParams({zeroForOne: true, amountSpecified: -int256(100e18), sqrtPriceLimitX96: 0});
+        BalanceDelta delta = toBalanceDelta(0, type(int128).min);
+
+        vm.expectRevert(TournamentHook.InvalidSwapDelta.selector);
+        manager.callAfterSwap(hook, key, params, delta);
+    }
+
     function testBurnPendingHubDirectly() public {
         address feeToken = address(hub);
         assertTrue(hub.transfer(address(hook), 20e18));
@@ -327,10 +399,30 @@ contract TournamentHookTest is Test {
         vault.setHook(address(0x1234));
     }
 
+    function testVaultRejectsEoaHookBeforeHookIsSet() public {
+        BuybackVault freshVault = new BuybackVault(address(hub), owner, treasury);
+
+        vm.prank(owner);
+        vm.expectRevert(BuybackVault.InvalidAddress.selector);
+        freshVault.setHook(address(0x1234));
+    }
+
     function testVaultRejectsTreasuryAsVault() public {
         vm.prank(owner);
         vm.expectRevert(BuybackVault.InvalidAddress.selector);
         vault.setTreasury(address(vault));
+    }
+
+    function testVaultRejectsRenounceOwnership() public {
+        vm.prank(owner);
+        vm.expectRevert(BuybackVault.RenounceOwnershipDisabled.selector);
+        vault.renounceOwnership();
+    }
+
+    function testDepositRejectsZeroAmounts() public {
+        vm.prank(address(hook));
+        vm.expectRevert(BuybackVault.InvalidAmount.selector);
+        vault.depositFee(address(quote), 0, 0);
     }
 
     function testDepositRejectsFeeOnTransferToken() public {

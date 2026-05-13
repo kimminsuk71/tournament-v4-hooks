@@ -24,7 +24,12 @@ contract DeployWithMinedHook is Script {
         address treasury = vm.envOr("TREASURY", owner);
         address poolManager = vm.envAddress("POOL_MANAGER");
         uint256 feeBipsRaw = vm.envOr("HOOK_FEE_BIPS", uint256(100));
+        uint256 saltMaxIterations = vm.envOr("SALT_MAX_ITERATIONS", uint256(250_000));
+        require(owner != address(0), "ZERO_OWNER");
+        require(treasury != address(0), "ZERO_TREASURY");
+        require(poolManager != address(0), "ZERO_POOL_MANAGER");
         require(feeBipsRaw <= 2_000, "HOOK_FEE_BIPS_TOO_HIGH");
+        require(saltMaxIterations != 0, "SALT_MAX_ITERATIONS_ZERO");
         // forge-lint: disable-next-line(unsafe-typecast)
         uint16 feeBips = uint16(feeBipsRaw);
 
@@ -37,7 +42,7 @@ contract DeployWithMinedHook is Script {
         bytes memory creationCode = abi.encodePacked(
             type(TournamentHook).creationCode, abi.encode(IPoolManager(poolManager), vault, owner, feeBips)
         );
-        (bytes32 salt, address predicted) = mineSalt(address(deployer), keccak256(creationCode), 250_000);
+        (bytes32 salt, address predicted) = mineSalt(address(deployer), keccak256(creationCode), saltMaxIterations);
         hook = TournamentHook(deployer.deploy(salt, creationCode));
         require(address(hook) == predicted, "PREDICTION_MISMATCH");
         vault.setHook(address(hook));
