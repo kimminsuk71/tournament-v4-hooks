@@ -73,6 +73,9 @@ contract TournamentHook is IHooks {
             revert InvalidAddress();
         }
         if (address(manager_).code.length == 0 || address(vault_).code.length == 0) revert InvalidAddress();
+        if (owner_ == address(this) || owner_ == address(manager_) || owner_ == address(vault_)) {
+            revert InvalidAddress();
+        }
         if (feeBips_ > 2_000) revert InvalidBips();
 
         Hooks.validateHookPermissions(
@@ -184,6 +187,7 @@ contract TournamentHook is IHooks {
         address currency1 = Currency.unwrap(key.currency1);
         if (currency0 == address(0) || currency1 == address(0)) revert NativeCurrencyUnsupported();
         if (currency0 >= currency1) revert CurrenciesOutOfOrder();
+        if (currency0.code.length == 0 || currency1.code.length == 0) revert InvalidAddress();
         if (!key.fee.isValid() && !key.fee.isDynamicFee()) revert InvalidPoolFee();
         if (key.tickSpacing < TickMath.MIN_TICK_SPACING || key.tickSpacing > TickMath.MAX_TICK_SPACING) {
             revert InvalidTickSpacing();

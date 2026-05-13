@@ -30,8 +30,14 @@ function displayTokenAmount(value) {
 
 function toFiniteNumber(value) {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
-  if (typeof value === "bigint") return Number(value);
-  if (typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value.trim())) return Number(value);
+  if (typeof value === "bigint") {
+    const converted = Number(value);
+    return Number.isFinite(converted) ? converted : 0;
+  }
+  if (typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value.trim())) {
+    const converted = Number(value);
+    return Number.isFinite(converted) ? converted : 0;
+  }
   return 0;
 }
 

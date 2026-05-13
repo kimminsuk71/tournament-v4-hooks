@@ -32,7 +32,9 @@ function parseAddress(name) {
 function parseBlockNumber(name, fallback) {
   const value = arg(name, fallback);
   if (!/^\d+$/.test(value)) fail(`--${name} must be a non-negative integer`);
-  return Number(value);
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) fail(`--${name} must be a safe integer`);
+  return parsed;
 }
 
 function normalizeOptionalAddress(value, label) {

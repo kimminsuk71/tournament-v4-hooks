@@ -17,10 +17,17 @@ contract TeamTokenFactory is Ownable {
     mapping(bytes32 teamKey => address token) public teamTokenOf;
     address[] public allTeamTokens;
 
-    constructor(address owner_) Ownable(owner_) {}
+    constructor(address owner_) Ownable(owner_) {
+        if (owner_ == address(this)) revert InvalidAddress();
+    }
 
     function renounceOwnership() public view override onlyOwner {
         revert RenounceOwnershipDisabled();
+    }
+
+    function transferOwnership(address nextOwner) public override onlyOwner {
+        if (nextOwner == address(0) || nextOwner == address(this)) revert InvalidAddress();
+        super.transferOwnership(nextOwner);
     }
 
     function createTeamToken(

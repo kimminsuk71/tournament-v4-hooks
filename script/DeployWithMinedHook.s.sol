@@ -28,6 +28,8 @@ contract DeployWithMinedHook is Script {
         require(owner != address(0), "ZERO_OWNER");
         require(treasury != address(0), "ZERO_TREASURY");
         require(poolManager != address(0), "ZERO_POOL_MANAGER");
+        require(poolManager.code.length != 0, "POOL_MANAGER_NO_CODE");
+        require(owner != poolManager, "OWNER_IS_POOL_MANAGER");
         require(feeBipsRaw <= 2_000, "HOOK_FEE_BIPS_TOO_HIGH");
         require(saltMaxIterations != 0, "SALT_MAX_ITERATIONS_ZERO");
         // forge-lint: disable-next-line(unsafe-typecast)

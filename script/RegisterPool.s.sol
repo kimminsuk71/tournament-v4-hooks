@@ -24,6 +24,8 @@ contract RegisterPool is Script {
         require(hookAddress != address(0), "ZERO_HOOK");
         require(tokenA != address(0) && tokenB != address(0), "ZERO_TOKEN");
         require(tokenA != tokenB, "IDENTICAL_TOKENS");
+        require(hookAddress.code.length != 0, "HOOK_NO_CODE");
+        require(tokenA.code.length != 0 && tokenB.code.length != 0, "TOKEN_NO_CODE");
         require(lpFeeRaw <= type(uint24).max, "LP_FEE_TOO_HIGH");
         require(tickSpacingRaw >= uint24(TickMath.MIN_TICK_SPACING), "TICK_SPACING_TOO_SMALL");
         require(tickSpacingRaw <= uint24(TickMath.MAX_TICK_SPACING), "TICK_SPACING_TOO_LARGE");

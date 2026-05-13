@@ -132,6 +132,23 @@ contract TournamentHookTest is Test {
         factory.renounceOwnership();
     }
 
+    function testFactoryTransferOwnershipRejectsSelfAndZeroOwner() public {
+        TeamTokenFactory factory = new TeamTokenFactory(owner);
+
+        vm.prank(owner);
+        vm.expectRevert(TeamTokenFactory.InvalidAddress.selector);
+        factory.transferOwnership(address(factory));
+
+        vm.prank(owner);
+        vm.expectRevert(TeamTokenFactory.InvalidAddress.selector);
+        factory.transferOwnership(address(0));
+
+        address nextOwner = address(0xCAFE);
+        vm.prank(owner);
+        factory.transferOwnership(nextOwner);
+        assertEq(factory.owner(), nextOwner);
+    }
+
     function testHubMintingIsDisabled() public {
         vm.expectRevert(HubToken.MintingDisabled.selector);
         hub.mint(address(this), 1e18);
@@ -374,6 +391,17 @@ contract TournamentHookTest is Test {
         hook.registerPool(unsortedKey);
     }
 
+    function testRegisterPoolRejectsEoaCurrency() public {
+        (Currency currency0, Currency currency1) = _sort(address(0x1234), address(quote));
+        PoolKey memory key = PoolKey({
+            currency0: currency0, currency1: currency1, fee: 3_000, tickSpacing: 60, hooks: IHooks(address(hook))
+        });
+
+        vm.prank(owner);
+        vm.expectRevert(TournamentHook.InvalidAddress.selector);
+        hook.registerPool(key);
+    }
+
     function testRegisterPoolRejectsInvalidFeeAndTickSpacing() public {
         (Currency currency0, Currency currency1) = _sort(address(team), address(quote));
         PoolKey memory key = PoolKey({
@@ -434,6 +462,27 @@ contract TournamentHookTest is Test {
         HookDeployer deployer = new HookDeployer(address(this));
         bytes memory creationCode = abi.encodePacked(
             type(TournamentHook).creationCode, abi.encode(IPoolManager(address(0xBEEF)), vault, owner, uint16(100))
+        );
+        bytes32 initCodeHash = keccak256(creationCode);
+
+        for (uint256 i = 0; i < 250_000; i++) {
+            bytes32 salt = bytes32(i);
+            address predicted =
+                address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), deployer, salt, initCodeHash)))));
+            if ((uint160(predicted) & Hooks.ALL_HOOK_MASK) == REQUIRED_FLAGS) {
+                vm.expectRevert(HookDeployer.DeploymentFailed.selector);
+                deployer.deploy(salt, creationCode);
+                return;
+            }
+        }
+        revert("NO_SALT_FOUND");
+    }
+
+    function testConstructorRejectsManagerAsInitialOwner() public {
+        HookDeployer deployer = new HookDeployer(address(this));
+        bytes memory creationCode = abi.encodePacked(
+            type(TournamentHook).creationCode,
+            abi.encode(IPoolManager(address(manager)), vault, address(manager), uint16(100))
         );
         bytes32 initCodeHash = keccak256(creationCode);
 
@@ -536,9 +585,33 @@ contract TournamentHookTest is Test {
         freshVault.setHook(address(0x1234));
     }
 
+    function testVaultRejectsSystemAddressesAsHookBeforeHookIsSet() public {
+        BuybackVault freshVault = new BuybackVault(address(hub), owner, treasury);
+
+        vm.prank(owner);
+        vm.expectRevert(BuybackVault.InvalidAddress.selector);
+        freshVault.setHook(address(freshVault));
+
+        vm.prank(owner);
+        vm.expectRevert(BuybackVault.InvalidAddress.selector);
+        freshVault.setHook(address(hub));
+    }
+
     function testVaultRejectsEoaHubToken() public {
         vm.expectRevert(BuybackVault.InvalidAddress.selector);
         new BuybackVault(address(0x1234), owner, treasury);
+    }
+
+    function testVaultRejectsOwnerAsHubToken() public {
+        vm.expectRevert(BuybackVault.InvalidAddress.selector);
+        new BuybackVault(address(hub), address(hub), treasury);
+    }
+
+    function testVaultRejectsOwnerAsSelf() public {
+        address predicted = vm.computeCreateAddress(address(this), vm.getNonce(address(this)));
+
+        vm.expectRevert(BuybackVault.InvalidAddress.selector);
+        new BuybackVault(address(hub), predicted, treasury);
     }
 
     function testVaultRejectsTreasuryAsVault() public {
@@ -563,10 +636,47 @@ contract TournamentHookTest is Test {
         vault.renounceOwnership();
     }
 
+    function testVaultTransferOwnershipRejectsSystemAddresses() public {
+        vm.prank(owner);
+        vm.expectRevert(BuybackVault.InvalidAddress.selector);
+        vault.transferOwnership(address(vault));
+
+        vm.prank(owner);
+        vm.expectRevert(BuybackVault.InvalidAddress.selector);
+        vault.transferOwnership(address(hub));
+
+        vm.prank(owner);
+        vm.expectRevert(BuybackVault.InvalidAddress.selector);
+        vault.transferOwnership(address(hook));
+
+        vm.prank(owner);
+        vm.expectRevert(BuybackVault.InvalidAddress.selector);
+        vault.transferOwnership(address(0));
+
+        address nextOwner = address(0xCAFE);
+        vm.prank(owner);
+        vault.transferOwnership(nextOwner);
+        assertEq(vault.owner(), nextOwner);
+    }
+
     function testDepositRejectsZeroAmounts() public {
         vm.prank(address(hook));
         vm.expectRevert(BuybackVault.InvalidAmount.selector);
         vault.depositFee(address(quote), 0, 0);
+    }
+
+    function testDepositRejectsEoaFeeToken() public {
+        vm.prank(address(hook));
+        vm.expectRevert(BuybackVault.InvalidAddress.selector);
+        vault.depositFee(address(0x1234), 1, 0);
+    }
+
+    function testBuybackRejectsEoaFeeToken() public {
+        MockBuybackExecutor executor = new MockBuybackExecutor(1e18);
+
+        vm.prank(owner);
+        vm.expectRevert(BuybackVault.InvalidAddress.selector);
+        vault.executeBuybackAndBurn(address(0x1234), address(executor), 1, 1);
     }
 
     function testDepositRejectsFeeOnTransferToken() public {

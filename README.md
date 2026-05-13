@@ -46,6 +46,7 @@ Current test coverage:
 - exact-output rejection
 - zero-amount swap rejection
 - pool registration hook-address mismatch rejection
+- pool registration EOA currency rejection
 - pool registration v4 fee and tick-spacing rejection
 - duplicate pool registration and duplicate removal rejection
 - buyback executor underpayment rejection
@@ -56,8 +57,12 @@ Current test coverage:
 - zero-amount fee deposit rejection
 - extreme signed swap delta rejection without arithmetic panic
 - EOA manager, vault, and hub-token dependency rejection
+- hook constructor initial-owner system-address rejection
 - canonical lowercase team id validation
 - treasury self, hook, and hub-token rejection
+- vault and team factory ownership transfer system-address rejection
+- vault hook system-address rejection before first binding
+- vault fee-token address code rejection
 - removed pool indexing status
 - CREATE2 hook salt mining and deployed address prediction
 - CREATE2 init code that deploys no runtime code rejection
@@ -80,10 +85,12 @@ This is still an experiment, but the current implementation enforces the main in
 - only the configured v4 `PoolManager` can call `afterSwap`
 - only pools whose `PoolKey.hooks` equals the deployed hook can be registered
 - registered pool currencies must be non-native ERC20 addresses and sorted as v4 expects
+- registered pool currencies must point to deployed contract code
 - registered pools must use a valid v4 static fee or dynamic fee sentinel and tick spacing in the v4 range
 - fee bips are capped at 20%
 - hook fee accounting rejects non-output swap deltas
 - hook ownership transfers emit `OwnershipTransferred` and preserve only-owner enforcement
+- hook initial owner cannot be the hook, pool manager, or vault contracts
 - hook ownership cannot be transferred to the hook, pool manager, or vault contracts
 - pool registration is a one-way state transition until explicit removal; duplicate register/remove calls revert
 - `HubToken` and `TeamToken` do not expose owner-only minting after construction
@@ -92,11 +99,16 @@ This is still an experiment, but the current implementation enforces the main in
 - team token creation rejects zero owner, zero initial supply, and empty metadata
 - team ids are restricted to lowercase letters, digits, and hyphens to prevent case/format duplicates
 - `TeamTokenFactory` ownership cannot be renounced because that would permanently disable team creation
+- `TeamTokenFactory` ownership cannot be transferred to itself
 - vault hook address can only be set once and must point to deployed code
+- vault hook address cannot be set to the vault, hub token, treasury, or current owner
 - vault ownership cannot be renounced because that would permanently disable buyback execution and treasury updates
+- vault ownership cannot be transferred to the vault, hook, or hub token contracts
+- vault initial owner cannot be the vault or hub token contract
 - vault treasury cannot be the vault, hook, or hub token contract
 - vault rejects fee-on-transfer or rebasing behavior that causes short receipt
 - vault rejects EOAs as buyback executors so buybacks must go through contract code
+- vault rejects EOA fee-token addresses before accounting or buyback execution
 - buyback executors must spend the exact fee-token amount and deliver the exact reported `HUB` amount
 - pending `HUB` can be burned directly without routing through an external executor
 - the frontend renders generated data through DOM text nodes rather than `innerHTML`
@@ -104,7 +116,7 @@ This is still an experiment, but the current implementation enforces the main in
 - per-team buyback display is gross routed buyback inventory because burn events are keyed by fee token, not pool id
 - the event indexer preserves removed pool history and marks it with `poolStatus`
 - deployment and indexing scripts validate common malformed inputs before broadcasting or querying
-- helper scripts reject out-of-range hook fee settings, invalid addresses, invalid block numbers, zero salt-search windows, and integer casts that would truncate before encoding or broadcasting
+- helper scripts reject out-of-range hook fee settings, invalid addresses, unsafe block numbers, zero salt-search windows, and integer casts that would truncate before encoding or broadcasting
 
 Indexer caveat: `BuybackBurned` is keyed by fee token, not pool id. Hub-level pending buyback is authoritative. Per-team buyback display is gross routed inventory, not net post-burn pending.
 
