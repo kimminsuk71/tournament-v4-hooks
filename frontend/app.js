@@ -29,6 +29,7 @@ function displayTokenAmount(value) {
 }
 
 function normalizeBoard(raw) {
+  raw ??= {};
   const hub = raw.hub ?? {};
   const teams = (raw.teams ?? []).map((team) => {
     const buyback = Number(team.buyback ?? team.buybackDisplay ?? 0);
@@ -53,7 +54,8 @@ function normalizeBoard(raw) {
       pendingBuyback: hub.pendingBuyback ?? hub.pendingBuybackDisplay ?? hub.pendingBuybackUsd ?? 0,
       treasuryRouted: hub.treasuryRouted ?? hub.treasuryRoutedDisplay ?? hub.treasuryRoutedUsd ?? 0
     },
-    teams
+    teams,
+    matches: raw.matches ?? []
   };
 }
 

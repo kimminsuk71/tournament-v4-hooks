@@ -129,6 +129,11 @@ contract TournamentHookTest is Test {
         new HubToken("Bad Hub", "BAD", address(0), 1e18);
     }
 
+    function testHubConstructorRejectsZeroSupply() public {
+        vm.expectRevert(HubToken.InvalidAmount.selector);
+        new HubToken("Bad Hub", "BAD", address(this), 0);
+    }
+
     function testTeamTokenConstructorRejectsInvalidInputs() public {
         vm.expectRevert(TeamToken.InvalidAddress.selector);
         new TeamToken("bad", "Bad", "BAD", address(0), 1e18);
@@ -200,6 +205,18 @@ contract TournamentHookTest is Test {
 
         vm.expectRevert(TournamentHook.ExactOutputUnsupported.selector);
         manager.callAfterSwap(hook, key, params, delta);
+    }
+
+    function testDisabledHookMethodsRevert() public {
+        (Currency currency0, Currency currency1) = _sort(address(team), address(quote));
+        PoolKey memory key = PoolKey({
+            currency0: currency0, currency1: currency1, fee: 3_000, tickSpacing: 60, hooks: IHooks(address(hook))
+        });
+        SwapParams memory params =
+            SwapParams({zeroForOne: true, amountSpecified: -int256(100e18), sqrtPriceLimitX96: 0});
+
+        vm.expectRevert(TournamentHook.HookNotEnabled.selector);
+        hook.beforeSwap(address(this), key, params, "");
     }
 
     function testRegisterPoolRejectsDifferentHookAddress() public {

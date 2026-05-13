@@ -36,7 +36,9 @@ forge test -vv
 Current test coverage:
 
 - team token factory creation and duplicate guard
+- token constructor zero-owner and zero-supply guards
 - hook swap fee routing
+- disabled hook entrypoints revert
 - buyback executor path and hub token burn
 - exact-output rejection
 - pool registration hook-address mismatch rejection
@@ -74,6 +76,7 @@ This is still an experiment, but the current implementation enforces the main in
 - the frontend renders generated data through DOM text nodes rather than `innerHTML`
 - the event indexer treats `pendingBuyback` as deposits minus burned fee-token inventory
 - deployment and indexing scripts validate common malformed inputs before broadcasting or querying
+- helper scripts reject out-of-range hook fee settings before encoding or broadcasting
 
 Indexer caveat: `BuybackBurned` is keyed by fee token, not pool id, so hub-level pending buyback is authoritative, while per-team pending is only exact when a fee token maps to one registered team pool.
 

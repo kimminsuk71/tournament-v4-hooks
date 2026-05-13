@@ -25,6 +25,14 @@ if (!deployer || !manager || !vault || !owner) {
   console.error("Usage: mine-hook-salt --deployer=0x... --manager=0x... --vault=0x... --owner=0x... [--fee-bips=100]");
   process.exit(1);
 }
+if (feeBips < 0n || feeBips > 2000n) {
+  console.error("--fee-bips must be between 0 and 2000");
+  process.exit(1);
+}
+if (max <= 0n) {
+  console.error("--max must be positive");
+  process.exit(1);
+}
 
 const artifact = JSON.parse(readFileSync(artifactPath, "utf8"));
 const abiCoder = AbiCoder.defaultAbiCoder();

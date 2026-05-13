@@ -9,7 +9,7 @@ import {PoolKey} from "v4-core/types/PoolKey.sol";
 import {PoolId, PoolIdLibrary} from "v4-core/types/PoolId.sol";
 import {ModifyLiquidityParams, SwapParams} from "v4-core/types/PoolOperation.sol";
 import {BalanceDelta} from "v4-core/types/BalanceDelta.sol";
-import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "v4-core/types/BeforeSwapDelta.sol";
+import {BeforeSwapDelta} from "v4-core/types/BeforeSwapDelta.sol";
 import {Currency} from "v4-core/types/Currency.sol";
 import {Hooks} from "v4-core/libraries/Hooks.sol";
 import {SafeCast} from "v4-core/libraries/SafeCast.sol";
@@ -31,6 +31,7 @@ contract TournamentHook is IHooks {
     error ExactOutputUnsupported();
     error CurrenciesOutOfOrder();
     error InvalidSwapDelta();
+    error HookNotEnabled();
 
     event PoolRegistered(PoolId indexed poolId, address indexed currency0, address indexed currency1);
     event PoolRegistrationRemoved(PoolId indexed poolId);
@@ -169,11 +170,11 @@ contract TournamentHook is IHooks {
     }
 
     function beforeInitialize(address, PoolKey calldata, uint160) external pure override returns (bytes4) {
-        revert("NOT_IMPLEMENTED");
+        revert HookNotEnabled();
     }
 
     function afterInitialize(address, PoolKey calldata, uint160, int24) external pure override returns (bytes4) {
-        revert("NOT_IMPLEMENTED");
+        revert HookNotEnabled();
     }
 
     function beforeAddLiquidity(address, PoolKey calldata, ModifyLiquidityParams calldata, bytes calldata)
@@ -182,7 +183,7 @@ contract TournamentHook is IHooks {
         override
         returns (bytes4)
     {
-        revert("NOT_IMPLEMENTED");
+        revert HookNotEnabled();
     }
 
     function afterAddLiquidity(
@@ -193,7 +194,7 @@ contract TournamentHook is IHooks {
         BalanceDelta,
         bytes calldata
     ) external pure override returns (bytes4, BalanceDelta) {
-        revert("NOT_IMPLEMENTED");
+        revert HookNotEnabled();
     }
 
     function beforeRemoveLiquidity(address, PoolKey calldata, ModifyLiquidityParams calldata, bytes calldata)
@@ -202,7 +203,7 @@ contract TournamentHook is IHooks {
         override
         returns (bytes4)
     {
-        revert("NOT_IMPLEMENTED");
+        revert HookNotEnabled();
     }
 
     function afterRemoveLiquidity(
@@ -213,7 +214,7 @@ contract TournamentHook is IHooks {
         BalanceDelta,
         bytes calldata
     ) external pure override returns (bytes4, BalanceDelta) {
-        revert("NOT_IMPLEMENTED");
+        revert HookNotEnabled();
     }
 
     function beforeSwap(address, PoolKey calldata, SwapParams calldata, bytes calldata)
@@ -222,7 +223,7 @@ contract TournamentHook is IHooks {
         override
         returns (bytes4, BeforeSwapDelta, uint24)
     {
-        return (IHooks.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
+        revert HookNotEnabled();
     }
 
     function beforeDonate(address, PoolKey calldata, uint256, uint256, bytes calldata)
@@ -231,7 +232,7 @@ contract TournamentHook is IHooks {
         override
         returns (bytes4)
     {
-        revert("NOT_IMPLEMENTED");
+        revert HookNotEnabled();
     }
 
     function afterDonate(address, PoolKey calldata, uint256, uint256, bytes calldata)
@@ -240,6 +241,6 @@ contract TournamentHook is IHooks {
         override
         returns (bytes4)
     {
-        revert("NOT_IMPLEMENTED");
+        revert HookNotEnabled();
     }
 }

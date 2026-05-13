@@ -23,7 +23,10 @@ contract DeployWithMinedHook is Script {
         address owner = vm.envOr("OWNER", broadcaster);
         address treasury = vm.envOr("TREASURY", owner);
         address poolManager = vm.envAddress("POOL_MANAGER");
-        uint16 feeBips = uint16(vm.envOr("HOOK_FEE_BIPS", uint256(100)));
+        uint256 feeBipsRaw = vm.envOr("HOOK_FEE_BIPS", uint256(100));
+        require(feeBipsRaw <= 2_000, "HOOK_FEE_BIPS_TOO_HIGH");
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint16 feeBips = uint16(feeBipsRaw);
 
         vm.startBroadcast(privateKey);
         hub = new HubToken("Tournament Hub", "HUB", owner, 1_000_000_000e18);

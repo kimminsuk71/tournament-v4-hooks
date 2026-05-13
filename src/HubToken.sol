@@ -6,12 +6,14 @@ import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC2
 
 contract HubToken is ERC20, ERC20Burnable {
     error InvalidAddress();
+    error InvalidAmount();
     error MintingDisabled();
 
     constructor(string memory name_, string memory symbol_, address owner_, uint256 initialSupply)
         ERC20(name_, symbol_)
     {
         if (owner_ == address(0)) revert InvalidAddress();
+        if (initialSupply == 0) revert InvalidAmount();
         _mint(owner_, initialSupply);
     }
 
