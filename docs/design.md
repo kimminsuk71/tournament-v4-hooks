@@ -18,7 +18,7 @@ swap on registered v4 pool
   -> hook takes fee from PoolManager
   -> hook deposits 50% to BuybackVault
   -> hook routes 50% to treasury
-  -> keeper calls BuybackVault.executeBuybackAndBurn
+  -> vault owner calls BuybackVault.executeBuybackAndBurn
   -> executor swaps fee token into hub token
   -> vault burns hub token
 ```

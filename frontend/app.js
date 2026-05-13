@@ -15,7 +15,7 @@ function compact(value) {
   return new Intl.NumberFormat("en-US", {
     notation: "compact",
     maximumFractionDigits: 2
-  }).format(Number(value ?? 0));
+  }).format(toFiniteNumber(value));
 }
 
 function flagUrl(code) {
@@ -25,16 +25,22 @@ function flagUrl(code) {
 }
 
 function displayTokenAmount(value) {
-  const numeric = Number(value ?? 0);
-  return Number.isFinite(numeric) ? compact(numeric) : "0";
+  return compact(toFiniteNumber(value));
+}
+
+function toFiniteNumber(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (typeof value === "bigint") return Number(value);
+  if (typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value.trim())) return Number(value);
+  return 0;
 }
 
 function normalizeBoard(raw) {
   raw ??= {};
   const hub = raw.hub ?? {};
   const teams = (raw.teams ?? []).map((team) => {
-    const buyback = Number(team.buyback ?? team.buybackDisplay ?? 0);
-    const treasury = Number(team.treasury ?? team.treasuryDisplay ?? 0);
+    const buyback = toFiniteNumber(team.buyback ?? team.buybackDisplay);
+    const treasury = toFiniteNumber(team.treasury ?? team.treasuryDisplay);
     return {
       ...team,
       buyback,
@@ -42,8 +48,8 @@ function normalizeBoard(raw) {
       pool: team.pool ?? team.poolId ?? "unregistered",
       poolStatus: team.poolStatus ?? (team.pool ?? team.poolId ? "active" : "unregistered"),
       burn: buyback,
-      volume: Number(team.volume ?? 0),
-      marketCap: Number(team.marketCap ?? 0)
+      volume: toFiniteNumber(team.volume),
+      marketCap: toFiniteNumber(team.marketCap)
     };
   });
 
