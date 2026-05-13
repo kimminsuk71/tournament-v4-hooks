@@ -53,6 +53,8 @@ function normalizeBoard(raw) {
       treasury,
       pool: team.pool ?? team.poolId ?? "unregistered",
       poolStatus: team.poolStatus ?? (team.pool ?? team.poolId ? "active" : "unregistered"),
+      poolCount: Math.max(0, Math.trunc(toFiniteNumber(team.poolCount ?? (team.pool ?? team.poolId ? 1 : 0)))),
+      activePoolCount: Math.max(0, Math.trunc(toFiniteNumber(team.activePoolCount ?? 0))),
       burn: buyback,
       volume: toFiniteNumber(team.volume),
       marketCap: toFiniteNumber(team.marketCap)
@@ -141,11 +143,19 @@ function createTeamCard(team, index) {
 
   const pool = document.createElement("div");
   pool.className = "pool";
-  pool.textContent = team.poolStatus === "removed" ? `Pool removed ${team.pool}` : `Pool ${team.pool}`;
+  pool.textContent = poolLabel(team);
 
   main.append(title, stats, pool);
   card.append(rank, flag, main);
   return card;
+}
+
+function poolLabel(team) {
+  if (team.poolStatus === "unregistered") return "Pool unregistered";
+  const count = team.poolCount > 1 ? `${team.poolCount} pools` : `Pool ${team.pool}`;
+  if (team.poolStatus === "removed") return `${count} removed`;
+  if (team.activePoolCount > 1) return `${team.activePoolCount} active pools`;
+  return count;
 }
 
 function statItem(label, value) {

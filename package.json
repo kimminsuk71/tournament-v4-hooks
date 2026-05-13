@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "forge build",
-    "test": "forge test -vv",
+    "test": "forge test -vv && node --test test/*.test.mjs",
     "mine:hook": "node tools/mine-hook-salt.mjs",
     "index": "node tools/index-events.mjs"
   },

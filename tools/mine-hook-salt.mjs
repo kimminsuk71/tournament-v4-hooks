@@ -50,8 +50,13 @@ if (max <= 0n) {
 
 const artifact = JSON.parse(readFileSync(artifactPath, "utf8"));
 const abiCoder = AbiCoder.defaultAbiCoder();
+const bytecode = artifact.bytecode?.object ?? artifact.bytecode;
+if (typeof bytecode !== "string" || !/^0x[0-9a-fA-F]+$/.test(bytecode) || bytecode === "0x") {
+  console.error(`artifact ${artifactPath} must contain non-empty hex bytecode`);
+  process.exit(1);
+}
 const constructorArgs = abiCoder.encode(["address", "address", "address", "uint16"], [manager, vault, owner, feeBips]);
-const initCode = concat([artifact.bytecode.object ?? artifact.bytecode, constructorArgs]);
+const initCode = concat([bytecode, constructorArgs]);
 const initCodeHash = keccak256(initCode);
 
 for (let i = 0n; i < max; i++) {

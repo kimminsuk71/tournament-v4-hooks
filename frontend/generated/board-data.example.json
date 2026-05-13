@@ -25,7 +25,15 @@
       "volume": 184000,
       "decimals": 18,
       "poolId": "0xpool-alpha",
+      "poolIds": [
+        "0xpool-alpha"
+      ],
+      "activePoolIds": [
+        "0xpool-alpha"
+      ],
       "poolStatus": "active",
+      "poolCount": 1,
+      "activePoolCount": 1,
       "buybackRaw": "7100000000000000000000",
       "treasuryRaw": "7100000000000000000000",
       "buybackDisplay": "7100.0",
@@ -41,7 +49,15 @@
       "volume": 211000,
       "decimals": 18,
       "poolId": "0xpool-bravo",
+      "poolIds": [
+        "0xpool-bravo"
+      ],
+      "activePoolIds": [
+        "0xpool-bravo"
+      ],
       "poolStatus": "active",
+      "poolCount": 1,
+      "activePoolCount": 1,
       "buybackRaw": "5800000000000000000000",
       "treasuryRaw": "5800000000000000000000",
       "buybackDisplay": "5800.0",

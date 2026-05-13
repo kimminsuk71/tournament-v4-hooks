@@ -113,8 +113,10 @@ This is still an experiment, but the current implementation enforces the main in
 - pending `HUB` can be burned directly without routing through an external executor
 - the frontend renders generated data through DOM text nodes rather than `innerHTML`
 - the event indexer treats hub-level `pendingBuyback` as deposits minus burned fee-token inventory
-- per-team buyback display is gross routed buyback inventory because burn events are keyed by fee token, not pool id
+- per-team buyback display sums gross routed buyback inventory across all pools for the team token because burn events are keyed by fee token, not pool id
 - the event indexer preserves removed pool history and marks it with `poolStatus`
+- the event indexer can attribute fee events from configured `poolId` / `poolIds` when the query starts after registration logs
+- the event indexer rejects duplicate configured team token addresses and pool ids to avoid double-counting
 - deployment and indexing scripts validate common malformed inputs before broadcasting or querying
 - helper scripts reject out-of-range hook fee settings, invalid addresses, unsafe block numbers, zero salt-search windows, and integer casts that would truncate before encoding or broadcasting
 
